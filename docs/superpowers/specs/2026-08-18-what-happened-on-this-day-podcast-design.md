@@ -53,6 +53,7 @@ The repository contains a PM agent that acts as the internal project coordinator
 
 Responsibilities:
 
+- Create `Episode` issues from an upstream brief when instructed by the user or Studio Chef
 - Pick up `Episode` issues that are ready to run
 - Parse issue metadata into an episode request
 - Create a run directory and standardized run manifest
@@ -96,16 +97,17 @@ Responsibilities:
 
 The first proof of concept targets one complete dry run per episode:
 
-1. A GitHub `Episode` issue exists in ready state.
-2. PM agent parses the issue into an episode request.
-3. PM agent invokes research agent.
-4. Research agent outputs a research dossier.
-5. PM agent invokes writer agent with the dossier.
-6. Writer agent outputs transcript artifacts.
-7. PM agent invokes producer agent with transcript and voice configuration.
-8. Producer agent outputs audio artifacts.
-9. PM agent marks the issue as `review`.
-10. A human reviews the result before the issue moves to `done`.
+1. Studio Chef or the user provides an upstream brief for a new daily episode, or an existing GitHub `Episode` issue is already in ready state.
+2. PM agent creates a new `Episode` issue from the brief or picks up the existing ready issue.
+3. PM agent parses the issue into an episode request.
+4. PM agent invokes research agent.
+5. Research agent outputs a research dossier.
+6. PM agent invokes writer agent with the dossier.
+7. Writer agent outputs transcript artifacts.
+8. PM agent invokes producer agent with transcript and voice configuration.
+9. Producer agent outputs audio artifacts.
+10. PM agent marks the issue as `review`.
+11. A human reviews the result before the issue moves to `done`.
 
 The first proof of concept should stop at review-ready output. Human review is required before completion.
 
@@ -118,7 +120,7 @@ The repository uses a minimal taxonomy in v1:
 - `Episode`
 - `Project`
 
-`Episode` issues are part of the automated episode workflow and are picked up by the PM agent.
+`Episode` issues are part of the automated episode workflow and are either created or picked up by the PM agent.
 
 `Project` issues represent team-building or system-building work such as schema design, prompt tuning, or Voicebox integration. They are not part of the daily episode pipeline and should be initiated manually by the user or Studio Chef.
 
@@ -151,6 +153,8 @@ Every `Episode` issue should include structured metadata for:
 - `output_run_path`
 
 The PM agent should accept partial metadata and fill reasonable defaults when allowed by project rules, but it must write back final resolved metadata into the run artifacts.
+
+When an upstream brief does not yet have a corresponding issue, the PM agent should create the `Episode` issue first, populate the initial metadata it can infer, and mark any unresolved fields explicitly for later resolution.
 
 ## Research Strategy
 
@@ -326,7 +330,7 @@ The architecture should support later additions without breaking the daily flow:
 
 - Separate top-level Studio Chef from repository-internal PM agent
 - Keep v1 taxonomy minimal with `Episode` and `Project`
-- Let PM agent pick up only `Episode`
+- Let PM agent create or pick up only `Episode`
 - Use hybrid research sourcing
 - Use balanced person/event/object candidate selection
 - Use English for the first proof of concept
