@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Transcript",
+  "type": "object",
+  "properties": {
+    "opening": { "type": "string" },
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "heading": { "type": "string" },
+          "body": { "type": "string" }
+        },
+        "required": ["heading", "body"],
+        "additionalProperties": false
+      }
+    },
+    "closing": { "type": "string" },
+    "estimatedDurationMin": { "type": "number", "minimum": 10, "maximum": 15 },
+    "ttsNotes": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["opening", "segments", "closing", "estimatedDurationMin", "ttsNotes"],
+  "additionalProperties": false
+}
