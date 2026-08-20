@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ResearchDossier",
+  "type": "object",
+  "properties": {
+    "episodeDate": { "type": "string" },
+    "chosenSubject": { "type": "string" },
+    "entityType": { "enum": ["person", "event", "object"] },
+    "chosenAngle": { "type": "string" },
+    "episodeThesis": { "type": "string" },
+    "timeline": { "type": "array", "items": { "type": "string" }, "minItems": 3 },
+    "storyBeats": { "type": "array", "items": { "type": "string" }, "minItems": 3 },
+    "modernRelevance": { "type": "string" },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "url": { "type": "string", "format": "uri" },
+          "sourceType": { "enum": ["wikipedia", "official", "reference", "archive", "news"] }
+        },
+        "required": ["title", "url", "sourceType"],
+        "additionalProperties": false
+      }
+    },
+    "safetyNotes": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["episodeDate", "chosenSubject", "entityType", "chosenAngle", "episodeThesis", "timeline", "storyBeats", "modernRelevance", "sources", "safetyNotes"],
+  "additionalProperties": false
+}

@@ -1,0 +1,6 @@
+{
+  "engine": "voicebox",
+  "voicePreset": "story-narrator-01",
+  "outputFormat": "mp3",
+  "enableVoiceCloning": false
+}

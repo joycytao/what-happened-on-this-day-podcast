@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AudioJob",
+  "type": "object",
+  "properties": {
+    "voicePreset": { "type": "string" },
+    "sourceTranscriptPath": { "type": "string" },
+    "outputAudioPath": { "type": "string" },
+    "transcript": { "$ref": "./transcript.schema.json" }
+  },
+  "required": ["voicePreset", "sourceTranscriptPath", "outputAudioPath", "transcript"],
+  "additionalProperties": false
+}
