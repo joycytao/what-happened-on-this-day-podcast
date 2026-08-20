@@ -80,20 +80,7 @@ export async function writeProjectIssuePickupManifest(plan: ProjectIssuePickupPl
   await fs.mkdir(plan.manifestDir, { recursive: true });
   const manifestPath = path.join(plan.manifestDir, "pickup.json");
 
-  await fs.writeFile(
-    manifestPath,
-    `${JSON.stringify(
-      {
-        issue: plan.issue,
-        baseBranch: plan.baseBranch,
-        branchName: plan.branchName,
-        worktreePath: plan.worktreePath
-      },
-      null,
-      2
-    )}\n`,
-    "utf8"
-  );
+  await fs.writeFile(manifestPath, `${JSON.stringify(buildPickupManifestDocument(plan), null, 2)}\n`, "utf8");
 
   return { manifestPath };
 }
@@ -119,6 +106,19 @@ export async function runProjectIssuePickup(input: {
     branchName: plan.branchName,
     worktreePath: plan.worktreePath,
     manifestPath
+  };
+}
+
+export function buildProjectIssuePullRequest(input: { plan: ProjectIssuePickupPlan }) {
+  return {
+    title: `Issue #${input.plan.issue.number}: ${input.plan.issue.title}`,
+    body: [
+      "## Summary",
+      `- complete project issue #${input.plan.issue.number}`,
+      `- work delivered from branch \`${input.plan.branchName}\``,
+      "",
+      `Closes #${input.plan.issue.number}`
+    ].join("\n")
   };
 }
 
@@ -191,6 +191,91 @@ export async function loadReadyProjectIssues(input: {
   }));
 }
 
+export async function openProjectIssuePullRequest(input: {
+  repoRoot: string;
+  repo: string;
+  plan: ProjectIssuePickupPlan;
+  execFile?: ExecFileFn;
+}) {
+  const execFile = input.execFile ?? execFileText;
+  const pullRequest = buildProjectIssuePullRequest({ plan: input.plan });
+
+  await execFile("git", ["push", "-u", "origin", input.plan.branchName], {
+    cwd: input.repoRoot
+  });
+
+  return execFile(
+    "gh",
+    [
+      "pr",
+      "create",
+      "--repo",
+      input.repo,
+      "--base",
+      input.plan.baseBranch,
+      "--head",
+      input.plan.branchName,
+      "--title",
+      pullRequest.title,
+      "--body",
+      pullRequest.body
+    ],
+    { cwd: input.repoRoot }
+  );
+}
+
+export async function updateProjectIssuePickupManifest(
+  manifestPath: string,
+  updates: {
+    prUrl?: string;
+  }
+) {
+  const saved = JSON.parse(await fs.readFile(manifestPath, "utf8")) as Record<string, unknown>;
+
+  await fs.writeFile(
+    manifestPath,
+    `${JSON.stringify(
+      {
+        ...saved,
+        ...updates
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+}
+
+export async function completeProjectIssue(input: {
+  repoRoot: string;
+  repo: string;
+  issueNumber: number;
+  loadIssues: () => Promise<ProjectQueueIssue[]>;
+  openPullRequest?: (plan: ProjectIssuePickupPlan) => Promise<string>;
+}) {
+  const issues = await input.loadIssues();
+  const issue = selectProjectIssueForPickup(issues, { issueNumber: input.issueNumber });
+  const plan = buildProjectIssuePickupPlan({ repoRoot: input.repoRoot, issue });
+  const { manifestPath } = await writeProjectIssuePickupManifest(plan);
+  const prUrl = await (input.openPullRequest ??
+    ((nextPlan) =>
+      openProjectIssuePullRequest({
+        repoRoot: input.repoRoot,
+        repo: input.repo,
+        plan: nextPlan
+      })))(plan);
+
+  await updateProjectIssuePickupManifest(manifestPath, { prUrl });
+
+  return {
+    issue,
+    branchName: plan.branchName,
+    worktreePath: plan.worktreePath,
+    manifestPath,
+    prUrl
+  };
+}
+
 export async function prepareProjectWorkspace(
   plan: ProjectIssuePickupPlan,
   input: {
@@ -227,4 +312,13 @@ function normalizeLabel(label: string) {
 async function execFileText(file: string, args: string[], options?: { cwd?: string }) {
   const result = await execFilePromise(file, args, options);
   return result.stdout.trim();
+}
+
+function buildPickupManifestDocument(plan: ProjectIssuePickupPlan) {
+  return {
+    issue: plan.issue,
+    baseBranch: plan.baseBranch,
+    branchName: plan.branchName,
+    worktreePath: plan.worktreePath
+  };
 }

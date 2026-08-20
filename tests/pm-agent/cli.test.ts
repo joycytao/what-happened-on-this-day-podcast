@@ -78,4 +78,56 @@ describe("pm agent cli", () => {
       "/tmp/podcast-repo/.worktrees/issue-5-build-daily-automated-pm-agent-issue-pickup-workflow"
     );
   });
+
+  it("runs the project completion command and reports the created pull request URL", async () => {
+    const logs: Array<{ message: string; meta?: Record<string, unknown> }> = [];
+
+    const result = await runPmAgentCli(
+      ["node", "pm-agent", "complete-project-issue", "--issue-number", "5"],
+      {
+        repoRoot: "/tmp/podcast-repo",
+        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+        resolveRepo: async () => "joycytao/what-happened-on-this-day-podcast",
+        loadIssues: async () => [
+          {
+            number: 5,
+            title: "Build daily automated PM-agent issue pickup workflow",
+            labels: ["type:project", "status:ready"],
+            state: "OPEN" as const
+          }
+        ],
+        completeProjectIssue: async () => ({
+          issue: {
+            number: 5,
+            title: "Build daily automated PM-agent issue pickup workflow",
+            labels: ["type:project", "status:ready"],
+            state: "OPEN" as const
+          },
+          branchName: "agent/issue-5-build-daily-automated-pm-agent-issue-pickup-workflow",
+          worktreePath:
+            "/tmp/podcast-repo/.worktrees/issue-5-build-daily-automated-pm-agent-issue-pickup-workflow",
+          manifestPath:
+            "/tmp/podcast-repo/runs/project-issue-5-build-daily-automated-pm-agent-issue-pickup-workflow/pickup.json",
+          prUrl: "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/99"
+        }),
+        logger: {
+          info(message, meta) {
+            logs.push({ message, meta });
+          },
+          warn() {},
+          error() {}
+        }
+      }
+    );
+
+    expect(result?.prUrl).toBe("https://github.com/joycytao/what-happened-on-this-day-podcast/pull/99");
+    expect(logs[0]).toMatchObject({
+      message: "Completed project issue workflow",
+      meta: {
+        repo: "joycytao/what-happened-on-this-day-podcast",
+        issueNumber: 5,
+        prUrl: "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/99"
+      }
+    });
+  });
 });

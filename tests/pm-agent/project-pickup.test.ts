@@ -4,11 +4,15 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   buildProjectIssuePickupPlan,
+  buildProjectIssuePullRequest,
+  completeProjectIssue,
   loadReadyProjectIssues,
+  openProjectIssuePullRequest,
   parseGitHubRepoSlug,
   prepareProjectWorkspace,
   runProjectIssuePickup,
   selectProjectIssueForPickup,
+  updateProjectIssuePickupManifest,
   writeProjectIssuePickupManifest,
   type ProjectQueueIssue
 } from "../../agents/pm-agent/project-pickup";
@@ -204,6 +208,96 @@ describe("pm agent project pickup", () => {
 
     expect(calls[0]?.args).not.toContain("--label");
     expect(issues[0]?.labels).toEqual(["type: project", "status:ready"]);
+  });
+
+  it("builds a pull request title and body for the selected project issue", () => {
+    const pullRequest = buildProjectIssuePullRequest({
+      plan: buildProjectIssuePickupPlan({
+        repoRoot: "/tmp/podcast-repo",
+        issue: issue({
+          number: 5,
+          title: "Build daily automated PM-agent issue pickup workflow",
+          labels: ["type:project", "status:ready"]
+        })
+      })
+    });
+
+    expect(pullRequest.title).toBe("Issue #5: Build daily automated PM-agent issue pickup workflow");
+    expect(pullRequest.body).toContain("Closes #5");
+    expect(pullRequest.body).toContain("agent/issue-5-build-daily-automated-pm-agent-issue-pickup-workflow");
+  });
+
+  it("opens a pull request from the project issue branch", async () => {
+    const calls: Array<{ file: string; args: string[]; cwd?: string }> = [];
+    const prUrl = await openProjectIssuePullRequest({
+      repoRoot: "/tmp/podcast-repo",
+      repo: "joycytao/what-happened-on-this-day-podcast",
+      plan: buildProjectIssuePickupPlan({
+        repoRoot: "/tmp/podcast-repo",
+        issue: issue({
+          number: 5,
+          title: "Build daily automated PM-agent issue pickup workflow",
+          labels: ["type:project", "status:ready"]
+        })
+      }),
+      execFile: async (file, args, options) => {
+        calls.push({ file, args, cwd: options?.cwd });
+        return file === "gh" ? "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/99" : "";
+      }
+    });
+
+    expect(calls[0]).toMatchObject({
+      file: "git",
+      args: ["push", "-u", "origin", "agent/issue-5-build-daily-automated-pm-agent-issue-pickup-workflow"],
+      cwd: "/tmp/podcast-repo"
+    });
+    expect(calls[1]?.file).toBe("gh");
+    expect(calls[1]?.args).toContain("--head");
+    expect(calls[1]?.args).toContain("agent/issue-5-build-daily-automated-pm-agent-issue-pickup-workflow");
+    expect(prUrl).toBe("https://github.com/joycytao/what-happened-on-this-day-podcast/pull/99");
+  });
+
+  it("updates pickup metadata with the created pull request URL", async () => {
+    const repoRoot = await createTempRepoRoot();
+    const plan = buildProjectIssuePickupPlan({
+      repoRoot,
+      issue: issue({
+        number: 5,
+        title: "Build daily automated PM-agent issue pickup workflow",
+        labels: ["type:project", "status:ready"]
+      })
+    });
+    const manifest = await writeProjectIssuePickupManifest(plan);
+
+    await updateProjectIssuePickupManifest(manifest.manifestPath, {
+      prUrl: "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/99"
+    });
+
+    const saved = JSON.parse(await fs.readFile(manifest.manifestPath, "utf8"));
+    expect(saved.prUrl).toBe("https://github.com/joycytao/what-happened-on-this-day-podcast/pull/99");
+  });
+
+  it("completes the project issue flow by opening a pull request and recording the URL", async () => {
+    const repoRoot = await createTempRepoRoot();
+    const result = await completeProjectIssue({
+      repoRoot,
+      repo: "joycytao/what-happened-on-this-day-podcast",
+      issueNumber: 5,
+      loadIssues: async () => [
+        issue({
+          number: 5,
+          title: "Build daily automated PM-agent issue pickup workflow",
+          labels: ["type:project", "status:ready"]
+        })
+      ],
+      openPullRequest: async () =>
+        "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/99"
+    });
+
+    const saved = JSON.parse(await fs.readFile(result.manifestPath, "utf8"));
+    expect(result.prUrl).toBe("https://github.com/joycytao/what-happened-on-this-day-podcast/pull/99");
+    expect(saved.prUrl).toBe(result.prUrl);
+    expect(saved.branchName).toBe("agent/issue-5-build-daily-automated-pm-agent-issue-pickup-workflow");
   });
 });
 

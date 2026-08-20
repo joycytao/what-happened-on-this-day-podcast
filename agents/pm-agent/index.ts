@@ -5,6 +5,7 @@ import { runWriterAgent } from "../writer-agent";
 import { runProducerAgent } from "../producer-agent";
 import { resolveEpisodeRequest } from "./github-issue";
 import {
+  completeProjectIssue,
   loadReadyProjectIssues,
   prepareProjectWorkspace,
   resolveGitHubRepoSlug,
@@ -60,11 +61,12 @@ export async function runPmAgentCli(
     resolveRepo?: () => Promise<string>;
     loadIssues?: () => Promise<ProjectQueueIssue[]>;
     prepareWorkspace?: Parameters<typeof runProjectIssuePickup>[0]["prepareWorkspace"];
+    completeProjectIssue?: typeof completeProjectIssue;
   } = {}
 ) {
   const { command, options } = parseCliArgs(argv);
 
-  if (command !== "pickup-project-issue") {
+  if (!["pickup-project-issue", "complete-project-issue"].includes(command)) {
     return null;
   }
 
@@ -79,6 +81,30 @@ export async function runPmAgentCli(
     typeof options.repo === "string"
       ? options.repo
       : await (dependencies.resolveRepo ?? (() => resolveGitHubRepoSlug({ repoRoot })))();
+
+  if (command === "complete-project-issue") {
+    if (typeof issueNumber !== "number" || Number.isNaN(issueNumber)) {
+      throw new Error("The complete-project-issue command requires --issue-number.");
+    }
+
+    const result = await (dependencies.completeProjectIssue ?? completeProjectIssue)({
+      repoRoot,
+      repo,
+      issueNumber,
+      loadIssues: dependencies.loadIssues ?? (() => loadReadyProjectIssues({ repo }))
+    });
+
+    logger.info("Completed project issue workflow", {
+      repo,
+      issueNumber: result.issue.number,
+      branchName: result.branchName,
+      worktreePath: result.worktreePath,
+      manifestPath: result.manifestPath,
+      prUrl: result.prUrl
+    });
+
+    return result;
+  }
 
   const result = await runProjectIssuePickup({
     repoRoot,
