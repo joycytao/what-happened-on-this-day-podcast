@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "pm-agent": "node --loader tsx ./agents/pm-agent/index.ts"
+    "pm-agent": "node --import tsx ./agents/pm-agent/index.ts"
   },
   "dependencies": {
     "zod": "^3.24.1"
