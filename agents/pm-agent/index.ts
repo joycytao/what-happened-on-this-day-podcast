@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import { runResearchAgent } from "../research-agent";
 import { runWriterAgent } from "../writer-agent";
 import { runProducerAgent } from "../producer-agent";
-import { resolveEpisodeRequest } from "./github-issue";
+import { createEpisodeIssueFromDate, resolveEpisodeRequest } from "./github-issue";
 import {
   completeProjectIssue,
   loadReadyProjectIssues,
@@ -62,11 +62,12 @@ export async function runPmAgentCli(
     loadIssues?: () => Promise<ProjectQueueIssue[]>;
     prepareWorkspace?: Parameters<typeof runProjectIssuePickup>[0]["prepareWorkspace"];
     completeProjectIssue?: typeof completeProjectIssue;
+    createEpisodeIssueFromDate?: typeof createEpisodeIssueFromDate;
   } = {}
 ) {
   const { command, options } = parseCliArgs(argv);
 
-  if (!["pickup-project-issue", "complete-project-issue"].includes(command)) {
+  if (!["pickup-project-issue", "complete-project-issue", "create-episode-from-date"].includes(command)) {
     return null;
   }
 
@@ -81,6 +82,31 @@ export async function runPmAgentCli(
     typeof options.repo === "string"
       ? options.repo
       : await (dependencies.resolveRepo ?? (() => resolveGitHubRepoSlug({ repoRoot })))();
+
+  if (command === "create-episode-from-date") {
+    const date = typeof options.date === "string" ? options.date : undefined;
+
+    if (!date) {
+      throw new Error("The create-episode-from-date command requires --date.");
+    }
+
+    const result = await (dependencies.createEpisodeIssueFromDate ?? createEpisodeIssueFromDate)({
+      repo,
+      repoRoot,
+      input: {
+        date
+      }
+    });
+
+    logger.info("Created episode issue from date", {
+      repo,
+      date,
+      issueNumber: result.issueNumber,
+      issueUrl: result.url
+    });
+
+    return result;
+  }
 
   if (command === "complete-project-issue") {
     if (typeof issueNumber !== "number" || Number.isNaN(issueNumber)) {
