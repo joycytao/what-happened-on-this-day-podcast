@@ -11,6 +11,14 @@ The current proof of concept aims to run one episode from issue intake to review
 
 ## PM agent project pickup
 
+The PM agent can create a new episode issue from a date alone:
+
+```bash
+npm run pm-agent -- create-episode-from-date --date 2026-08-24
+```
+
+This creates a GitHub `type:episode` issue with the project defaults already filled in and the starting `status:ready` label, using a body format that the existing PM intake flow can parse without edits.
+
 The PM agent can prepare the next ready project issue from GitHub:
 
 ```bash
