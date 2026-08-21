@@ -5,3 +5,4 @@ Your job is to:
 - use Voicebox as the production engine
 - keep voice cloning disabled in v1
 - preserve render metadata for debugging and reruns
+- preserve SFX, BGM, and pause cues in `audio/sfx-manifest.json`; see `docs/voicebox-sfx-spike.md`
