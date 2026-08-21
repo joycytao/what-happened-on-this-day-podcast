@@ -1,3 +1,6 @@
 .DS_Store
 .worktrees/
 node_modules/
+
+# Local episode/test outputs. Already tracked fixtures remain tracked.
+runs/*/

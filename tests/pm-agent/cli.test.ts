@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { runPmAgentCli } from "../../agents/pm-agent";
 
+type EpisodeIssueDraft = { title: string; body: string; labels: string[] };
+
 describe("pm agent cli", () => {
   it("runs the project pickup command with repo resolution and dry-run", async () => {
     const logs: Array<{ message: string; meta?: Record<string, unknown> }> = [];
@@ -127,6 +129,153 @@ describe("pm agent cli", () => {
         repo: "joycytao/what-happened-on-this-day-podcast",
         issueNumber: 5,
         prUrl: "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/99"
+      }
+    });
+  });
+
+  it("creates an episode issue from a date without running downstream agents", async () => {
+    const logs: Array<{ message: string; meta?: Record<string, unknown> }> = [];
+    const createdIssueDrafts: Array<{ title: string; body: string; labels: string[] }> = [];
+
+    const result = await runPmAgentCli(
+      ["node", "pm-agent", "create-episode", "--date", "2026-08-24", "--working-title", "daily episode"],
+      {
+        repoRoot: "/tmp/podcast-repo",
+        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+        resolveRepo: async () => "joycytao/what-happened-on-this-day-podcast",
+        createEpisodeIssue: async (draft: EpisodeIssueDraft) => {
+          createdIssueDrafts.push(draft);
+
+          return {
+            issueNumber: 24,
+            title: draft.title,
+            body: draft.body,
+            labels: draft.labels
+          };
+        },
+        logger: {
+          info(message, meta) {
+            logs.push({ message, meta });
+          },
+          warn() {},
+          error() {}
+        }
+      }
+    );
+
+    expect(createdIssueDrafts).toHaveLength(1);
+    expect(createdIssueDrafts[0]).toMatchObject({
+      title: "Episode: August 24, 2026 - daily episode",
+      labels: ["type:episode", "status:ready"]
+    });
+    expect(result).toMatchObject({
+      issueNumber: 24,
+      title: "Episode: August 24, 2026 - daily episode"
+    });
+    expect(logs[0]).toMatchObject({
+      message: "Created episode issue",
+      meta: {
+        repo: "joycytao/what-happened-on-this-day-podcast",
+        issueNumber: 24
+      }
+    });
+  });
+
+  it("picks up a ready episode issue and passes issue context downstream", async () => {
+    const logs: Array<{ message: string; meta?: Record<string, unknown> }> = [];
+    const pickedUpIssues: Array<{ issueNumber: number; title: string }> = [];
+
+    const result = await runPmAgentCli(["node", "pm-agent", "pickup-episode", "--issue-number", "24"], {
+      repoRoot: "/tmp/podcast-repo",
+      resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+      resolveRepo: async () => "joycytao/what-happened-on-this-day-podcast",
+      loadEpisodeIssues: async () => [
+        {
+          issueNumber: 23,
+          title: "Episode: August 23, 2026 - daily episode",
+          body: "date: 2026-08-23\nepisode_slug: 2026-08-23-daily-episode",
+          labels: ["type:episode", "status:review"],
+          state: "OPEN" as const
+        },
+        {
+          issueNumber: 24,
+          title: "Episode: August 24, 2026 - daily episode",
+          body: "date: 2026-08-24\nepisode_slug: 2026-08-24-daily-episode",
+          labels: ["type:episode", "status:ready"],
+          state: "OPEN" as const
+        }
+      ],
+      runEpisodePipeline: async ({ issue }) => {
+        if (!issue) throw new Error("Expected pickup to pass an issue.");
+        pickedUpIssues.push({ issueNumber: issue.issueNumber, title: issue.title });
+
+        return {
+          issueNumber: issue.issueNumber,
+          runDir: "/tmp/podcast-repo/runs/2026-08-24-daily-episode",
+          finalStage: "review" as const
+        };
+      },
+      logger: {
+        info(message, meta) {
+          logs.push({ message, meta });
+        },
+        warn() {},
+        error() {}
+      }
+    });
+
+    expect(pickedUpIssues).toEqual([
+      {
+        issueNumber: 24,
+        title: "Episode: August 24, 2026 - daily episode"
+      }
+    ]);
+    expect(result).toMatchObject({
+      issueNumber: 24,
+      finalStage: "review"
+    });
+    expect(logs[0]).toMatchObject({
+      message: "Picked up episode issue",
+      meta: {
+        issueNumber: 24,
+        finalStage: "review"
+      }
+    });
+  });
+
+  it("triages a new feature request before creating work", async () => {
+    const logs: Array<{ message: string; meta?: Record<string, unknown> }> = [];
+
+    const result = await runPmAgentCli(
+      ["node", "pm-agent", "triage-feature", "--request", "新功能 判斷 Voicebox 是否能產生時光機和鐘聲音效，以及如何實作"],
+      {
+        repoRoot: "/tmp/podcast-repo",
+        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+        resolveRepo: async () => "joycytao/what-happened-on-this-day-podcast",
+        loadFeatureIntakeContext: async () => ({
+          existingIssues: [],
+          existingPullRequests: [],
+          mainBranchSignals: []
+        }),
+        logger: {
+          info(message, meta) {
+            logs.push({ message, meta });
+          },
+          warn() {},
+          error() {}
+        }
+      }
+    );
+
+    expect(result).toMatchObject({
+      action: "create_spike",
+      issueType: "type:project"
+    });
+    expect(logs[0]).toMatchObject({
+      message: "Triaged feature request",
+      meta: {
+        action: "create_spike",
+        issueType: "type:project"
       }
     });
   });
