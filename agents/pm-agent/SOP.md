@@ -76,6 +76,24 @@ The PM agent then:
 - updates issue context when new information exists
 - dispatches research, writing, and production in order
 
+Episode work advances by downstream handoff. The PM agent coordinates stage transitions, verifies required artifacts, and updates the issue; it does not perform research, transcript writing, or audio production itself.
+
+### Complete Project Issues
+
+For `type:project` issues, the PM agent must decide whether the issue is a normal implementation issue or a spike.
+
+Normal implementation project issues are complete only when their corresponding PR has been merged. The PM agent must verify the merged PR, then close the issue.
+
+Spike project issues are feasibility or research tasks whose durable output is a reference artifact. Before a spike can move to `status:review`, the PM agent must attach or embed the spike outcome on the GitHub issue. The outcome must be specific enough for future agents to use as a reference, including the decision, evidence checked, recommendation, and concrete follow-up work. A spike with no attached or embedded outcome document must remain active or blocked; it must not be treated as complete.
+
+When a spike has been accepted as done and has reference material attached, the PM agent must convert the spike outcome into actionable follow-up issue(s):
+
+- create the new implementation or workflow issue(s) from the spike recommendation
+- include the old spike issue number in every follow-up issue body
+- copy only the relevant acceptance criteria and evidence into the new issue
+- remove all labels from the old spike issue
+- close the old spike issue after the follow-up issue(s) exist
+
 ### Update Context
 
 The PM agent must update the issue context when it learns new workflow state.
