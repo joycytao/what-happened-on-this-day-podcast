@@ -1,14 +1,30 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { execFile } from "node:child_process";
+import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
+import type { EpisodeRequest } from "../../src/contracts";
 import { episodeRequestSchema } from "../../src/contracts";
 
-const execFileAsync = promisify(execFile);
+const execFileAsync = promisify(execFileCallback);
+
+type ExecFileFn = (
+  file: string,
+  args: string[],
+  options?: { cwd?: string }
+) => Promise<string>;
 
 export type EpisodeBrief = {
   date: string;
   workingTitle?: string;
+};
+
+type EpisodeDateInput = {
+  date: string;
+  language?: "en";
+  audience?: "children-first-adult-friendly";
+  durationTargetMin?: number;
+  durationMaxMin?: 15;
+  currentStage?: EpisodeRequest["currentStage"];
 };
 
 export type EpisodeIssueDraft = {
@@ -30,7 +46,43 @@ export type EpisodeIssueContextUpdates = {
   outputRunPath?: string;
 };
 
-export function buildEpisodeIssueDraft(brief: EpisodeBrief): EpisodeIssueDraft {
+export function resolveEpisodeDateInput(input: EpisodeDateInput): EpisodeRequest {
+  const titleSlug = slugifyEpisodeTitle(formatEpisodeTitleDate(input.date));
+
+  return episodeRequestSchema.parse({
+    date: input.date,
+    episodeSlug: `${input.date}-${titleSlug}`,
+    language: input.language ?? "en",
+    audience: input.audience ?? "children-first-adult-friendly",
+    durationTargetMin: input.durationTargetMin ?? 12,
+    durationMaxMin: input.durationMaxMin ?? 15,
+    currentStage: input.currentStage ?? "ready"
+  });
+}
+
+export function buildEpisodeIssueDraft(input: EpisodeBrief | EpisodeRequest | EpisodeDateInput): EpisodeIssueDraft {
+  if ("workingTitle" in input) {
+    return buildBriefEpisodeIssueDraft(input);
+  }
+
+  const request = "episodeSlug" in input ? input : resolveEpisodeDateInput(input);
+
+  return {
+    title: `Episode: ${formatEpisodeTitleDate(request.date)}`,
+    body: [
+      `date: ${request.date}`,
+      `episode_slug: ${request.episodeSlug}`,
+      `language: ${request.language}`,
+      `audience: ${request.audience}`,
+      `duration_target_min: ${request.durationTargetMin}`,
+      `duration_max_min: ${request.durationMaxMin}`,
+      `current_stage: ${request.currentStage}`
+    ].join("\n"),
+    labels: ["type:episode", "status:ready"]
+  };
+}
+
+function buildBriefEpisodeIssueDraft(brief: EpisodeBrief): EpisodeIssueDraft {
   const workingTitle = brief.workingTitle ?? "daily episode";
   const episodeSlug = `${brief.date}-${workingTitle.toLowerCase().replace(/\s+/g, "-")}`;
   const titleDate = new Intl.DateTimeFormat("en-US", {
@@ -100,6 +152,45 @@ export async function createEpisodeIssue(draft: EpisodeIssueDraft, options: { re
     title: draft.title,
     body: draft.body,
     labels: draft.labels
+  };
+}
+
+export async function createEpisodeIssueFromDate(input: {
+  repo: string;
+  repoRoot?: string;
+  input: EpisodeDateInput;
+  execFile?: ExecFileFn;
+}) {
+  const request = resolveEpisodeDateInput(input.input);
+  const draft = buildEpisodeIssueDraft(request);
+  const output = await (input.execFile ?? execFileText)(
+    "gh",
+    [
+      "issue",
+      "create",
+      "--repo",
+      input.repo,
+      "--title",
+      draft.title,
+      "--body",
+      draft.body,
+      "--label",
+      draft.labels[0],
+      "--label",
+      draft.labels[1]
+    ],
+    input.repoRoot ? { cwd: input.repoRoot } : undefined
+  );
+
+  const parsed = parseCreatedIssueOutput(output);
+
+  return {
+    issueNumber: parsed.issueNumber,
+    url: parsed.url,
+    title: draft.title,
+    body: draft.body,
+    labels: [...draft.labels],
+    request
   };
 }
 
@@ -351,4 +442,56 @@ function replaceIssueField(body: string, field: string, value: string) {
 
 function normalizeLabel(label: string) {
   return label.toLowerCase().replace(/:\s+/g, ":").trim();
+}
+
+function formatEpisodeTitleDate(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December"
+  ];
+
+  return `${monthNames[month - 1]} ${day}, ${year}`;
+}
+
+function slugifyEpisodeTitle(title: string) {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function parseCreatedIssueOutput(output: string) {
+  const trimmed = output.trim();
+
+  if (trimmed.startsWith("{")) {
+    const parsed = JSON.parse(trimmed) as { number: number; url: string };
+    return {
+      issueNumber: parsed.number,
+      url: parsed.url
+    };
+  }
+
+  const match = trimmed.match(/\/issues\/(\d+)\/?$/);
+
+  if (!match) {
+    throw new Error(`Could not parse created issue output: ${output}`);
+  }
+
+  return {
+    issueNumber: Number(match[1]),
+    url: trimmed
+  };
+}
+
+async function execFileText(file: string, args: string[], options?: { cwd?: string }) {
+  const result = await execFileAsync(file, args, options);
+  return result.stdout.trim();
 }

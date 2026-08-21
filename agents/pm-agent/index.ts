@@ -6,6 +6,7 @@ import { runProducerAgent } from "../producer-agent";
 import {
   buildEpisodeIssueDraft,
   createEpisodeIssue,
+  createEpisodeIssueFromDate,
   loadReadyEpisodeIssues,
   resolveEpisodeRequest,
   selectEpisodeIssueForPickup,
@@ -95,6 +96,7 @@ export async function runPmAgentCli(
     prepareWorkspace?: Parameters<typeof runProjectIssuePickup>[0]["prepareWorkspace"];
     completeProjectIssue?: typeof completeProjectIssue;
     createEpisodeIssue?: (draft: EpisodeIssueDraft) => Promise<EpisodeIssue>;
+    createEpisodeIssueFromDate?: typeof createEpisodeIssueFromDate;
     updateEpisodeIssueContext?: (issue: EpisodeIssue, updates: EpisodeIssueContextUpdates) => Promise<EpisodeIssue>;
     runEpisodePipeline?: typeof runEpisodePipeline;
     loadFeatureIntakeContext?: () => Promise<Omit<FeatureIntakeInput, "request">>;
@@ -102,7 +104,14 @@ export async function runPmAgentCli(
 ) {
   const { command, options } = parseCliArgs(argv);
 
-  if (!["create-episode", "pickup-episode", "pickup-project-issue", "complete-project-issue", "triage-feature"].includes(command)) {
+  if (![
+    "create-episode",
+    "create-episode-from-date",
+    "pickup-episode",
+    "pickup-project-issue",
+    "complete-project-issue",
+    "triage-feature"
+  ].includes(command)) {
     return null;
   }
 
@@ -137,6 +146,31 @@ export async function runPmAgentCli(
     });
 
     return decision;
+  }
+
+  if (command === "create-episode-from-date") {
+    const date = typeof options.date === "string" ? options.date : undefined;
+
+    if (!date) {
+      throw new Error("The create-episode-from-date command requires --date.");
+    }
+
+    const result = await (dependencies.createEpisodeIssueFromDate ?? createEpisodeIssueFromDate)({
+      repo,
+      repoRoot,
+      input: {
+        date
+      }
+    });
+
+    logger.info("Created episode issue from date", {
+      repo,
+      date,
+      issueNumber: result.issueNumber,
+      issueUrl: result.url
+    });
+
+    return result;
   }
 
   if (command === "create-episode") {
