@@ -3,6 +3,7 @@ import {
   audioJobSchema,
   episodeRequestSchema,
   researchDossierSchema,
+  researchReferencesSchema,
   transcriptSchema
 } from "../../src/contracts";
 
@@ -34,6 +35,26 @@ describe("shared podcast contracts", () => {
         modernRelevance: "Museums still shape how children meet history today.",
         sources: [{ title: "Museum archive", url: "https://example.com/archive", sourceType: "official" }],
         safetyNotes: []
+      })
+    ).not.toThrow();
+  });
+
+  it("accepts valid sourced research references", () => {
+    expect(() =>
+      researchReferencesSchema.parse({
+        episodeDate: "2026-08-18",
+        chosenSubject: "The opening of a landmark museum",
+        items: [
+          {
+            id: "ref-1",
+            summary: "The museum archive supports the planning and opening timeline.",
+            source: {
+              title: "Museum archive",
+              url: "https://example.com/archive",
+              sourceType: "official"
+            }
+          }
+        ]
       })
     ).not.toThrow();
   });

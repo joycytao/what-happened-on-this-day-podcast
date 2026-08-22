@@ -240,6 +240,16 @@ Recommended body:
 ## Overrides
 
 - none
+
+## Required Tasks
+
+- [ ] Resolve episode request metadata
+- [ ] Create run directory and episode-request.json
+- [ ] Research date-linked candidates, choose one subject, and create sourced references
+- [ ] Write transcript from accepted research dossier
+- [ ] Run Humanizer review on transcript and revise AI-sounding passages
+- [ ] Produce audio artifact and render metadata
+- [ ] Prepare episode for human review
 ```
 
 Recommended labels:
@@ -266,6 +276,8 @@ Allowed alternate path:
   - creates or picks up the issue
   - resolves metadata
   - creates the run directory
+  - defines the required task checklist on newly created episode issues
+  - updates issue context when new workflow state is known
   - updates labels and state
   - dispatches the next stage
 
@@ -291,21 +303,26 @@ Allowed alternate path:
 
 1. Input arrives with a date such as `2026-08-19`
 2. PM agent creates a `type:episode` issue
-3. PM agent applies project defaults
+3. PM agent applies project defaults and writes the required task checklist
 4. Issue receives `status:ready`
-5. PM agent creates a run directory and `episode-request.json`
-6. Issue moves to `status:researching`
-7. PM agent dispatches the research agent
-8. Research dossier is saved
-9. Issue moves to `status:writing`
-10. PM agent dispatches the writer agent
-11. Transcript artifacts are saved
-12. Issue moves to `status:producing`
-13. PM agent dispatches the producer agent
-14. Audio artifacts are saved
-15. Issue moves to `status:review`
-16. A human reviews the output
-17. If approved, the issue moves to `status:done`
+5. PM agent picks up the ready issue
+6. PM agent resolves the episode request from the issue body
+7. PM agent creates a run directory and `episode-request.json`
+8. PM agent updates issue context, including `current_stage` and `output_run_path`
+9. Issue moves to `status:researching`
+10. PM agent dispatches the research agent
+11. Research dossier is saved
+12. Reference artifacts are saved under `references/`
+13. PM agent packages `research-dossier.json`, `references/research-references.json`, and `references/README.md` onto the GitHub issue
+14. Issue moves to `status:writing`
+15. PM agent dispatches the writer agent
+16. Transcript artifacts are saved
+17. Issue moves to `status:producing`
+18. PM agent dispatches the producer agent
+19. Audio artifacts are saved
+20. Issue moves to `status:review`
+21. A human reviews the output
+22. If approved, the issue moves to `status:done`
 
 ### Blocked path
 
@@ -327,6 +344,9 @@ Instead, it assigns work through artifacts and stage transitions:
 - `status:researching`
   - research agent consumes `episode-request.json`
   - research agent produces `research-dossier.json`
+  - research agent produces `references/research-references.json`
+  - research agent produces `references/README.md`
+  - PM agent packages those three files onto the GitHub issue before any later status update
 - `status:writing`
   - writer agent consumes `research-dossier.json`
   - writer agent produces `transcript.md` and `transcript.json`

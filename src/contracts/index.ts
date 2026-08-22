@@ -31,6 +31,24 @@ export const researchDossierSchema = z.object({
   safetyNotes: z.array(z.string())
 });
 
+export const researchSourceSchema = z.object({
+  title: z.string(),
+  url: z.string().url(),
+  sourceType: z.enum(["wikipedia", "official", "reference", "archive", "news"])
+});
+
+export const researchReferencesSchema = z.object({
+  episodeDate: z.string(),
+  chosenSubject: z.string(),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      summary: z.string().min(1),
+      source: researchSourceSchema
+    })
+  ).min(1)
+});
+
 export const transcriptSchema = z.object({
   opening: z.string(),
   segments: z.array(
@@ -53,5 +71,6 @@ export const audioJobSchema = z.object({
 
 export type EpisodeRequest = z.infer<typeof episodeRequestSchema>;
 export type ResearchDossier = z.infer<typeof researchDossierSchema>;
+export type ResearchReferences = z.infer<typeof researchReferencesSchema>;
 export type Transcript = z.infer<typeof transcriptSchema>;
 export type AudioJob = z.infer<typeof audioJobSchema>;
