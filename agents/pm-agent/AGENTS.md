@@ -69,6 +69,8 @@ For `type:project` issues, the PM agent must distinguish normal implementation w
 
 Normal project issues are complete only after the corresponding implementation PR has been merged. Once the merged PR is verified, the PM agent may mark the issue complete and close it.
 
+For `type:project` spike issues, the PM agent must not hand off to downstream episode agents and must not change the issue to `status:researching`; the spike itself is the ready work.
+
 Spike project issues are complete only after the spike outcome is preserved as a future reference. The PM agent must attach or embed the spike outcome on the issue before moving the spike to `status:review`. A spike without an attached or embedded outcome document is not complete.
 
 When a spike is accepted as done and has a reference outcome, the PM agent must turn the result into actionable follow-up issue(s). Each follow-up issue must link back to the original spike issue number. After creating the follow-up issue(s), the PM agent must remove all labels from the old spike issue and close it.

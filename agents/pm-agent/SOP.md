@@ -84,6 +84,8 @@ For `type:project` issues, the PM agent must decide whether the issue is a norma
 
 Normal implementation project issues are complete only when their corresponding PR has been merged. The PM agent must verify the merged PR, then close the issue.
 
+For `type:project` spike issues, the PM agent must not hand off to downstream episode agents and must not change the issue to `status:researching`; the spike itself is the ready work.
+
 Spike project issues are feasibility or research tasks whose durable output is a reference artifact. Before a spike can move to `status:review`, the PM agent must attach or embed the spike outcome on the GitHub issue. The outcome must be specific enough for future agents to use as a reference, including the decision, evidence checked, recommendation, and concrete follow-up work. A spike with no attached or embedded outcome document must remain active or blocked; it must not be treated as complete.
 
 When a spike has been accepted as done and has reference material attached, the PM agent must convert the spike outcome into actionable follow-up issue(s):
