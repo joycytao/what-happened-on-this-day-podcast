@@ -60,6 +60,13 @@ The repo-local production spec adds the forward production target:
 - EQ/high-cut cleanup
 - final export normalized to -16 LUFS with -1.0 dB true peak
 
+The real Voicebox integration spike in `docs/spikes/issue-4-voicebox-integration-model-selection/README.md` adds the current implementation direction:
+
+- use REST `POST /speak` as the first repeatable producer-agent integration surface
+- use `qwen_custom_voice` 1.7B as the default narration engine
+- use `qwen_custom_voice` 0.6B, `chatterbox_turbo`, or `kokoro` as explicit fallback engines depending on preview speed, expressive tags, or low-footprint needs
+- keep MCP for operator/debug workflows instead of making it mandatory for batch episode artifact generation
+
 ## Completion Criteria
 
 Producer-agent work is complete only when:
@@ -81,3 +88,4 @@ This SOP is based on:
 - Repo-local `skills/kids-podcast-common-spec/SKILL.md`.
 - Repo-local `skills/kids-podcast-spec/SKILL.md`.
 - Repo-local `skills/kids-podcast-production-spec/SKILL.md`.
+- Project spike issue #4 and `docs/spikes/issue-4-voicebox-integration-model-selection/README.md`.
