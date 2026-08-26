@@ -65,6 +65,8 @@ For each production run, producer-agent should preserve enough artifact state fo
 
 The SFX manifest should record the narration engine role as speech generation and preserve all downstream sound design cues for reviewability.
 
+For the real Voicebox narration integration decision, see `docs/spikes/issue-4-voicebox-integration-model-selection/README.md`. That spike selects REST `POST /speak` as the first repeatable producer-agent integration path, recommends `qwen_custom_voice` 1.7B as the default narration engine, and keeps MCP as an operator/debug surface.
+
 ## Evidence Base
 
 These responsibilities come from:
@@ -78,3 +80,4 @@ These responsibilities come from:
 - Repo-local `skills/kids-podcast-common-spec/SKILL.md`.
 - Repo-local `skills/kids-podcast-spec/SKILL.md`.
 - Repo-local `skills/kids-podcast-production-spec/SKILL.md`.
+- Project spike issue #4 and `docs/spikes/issue-4-voicebox-integration-model-selection/README.md`.
