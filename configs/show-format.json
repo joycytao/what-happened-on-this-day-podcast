@@ -1,8 +1,8 @@
 {
   "language": "en",
   "format": "single-story-deep-dive",
-  "durationTargetMin": 12,
-  "durationMaxMin": 15,
+  "durationTargetMin": 5,
+  "durationMaxMin": 8,
   "audience": "children-first-adult-friendly",
   "openingStyle": "fixed-shared-greeting",
   "closingStyle": "modern-relevance"

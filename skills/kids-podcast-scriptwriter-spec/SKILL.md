@@ -54,7 +54,7 @@ To prevent AI voice pronunciation errors in Qwen3-TTS:
 
 ## 4. Scriptwriter Quality Assurance Checklist
 - [ ] **Benchmark Alignment:** Was the script structured using the 4-Step Reference Deconstruction Protocol?
-- [ ] **Word Count Standard:** Script length falls between 2,000 and 2,400 words (10–12 minutes).
+- [ ] **Duration Standard:** Script length is paced for 5-8 minutes.
 - [ ] **15-Second Hook:** Hook establishes a clear mystery within the first 15 seconds.
 - [ ] **Concrete Metaphor:** Contains at least 1 vivid everyday metaphor explaining the core science in Module 3.
 - [ ] **Attention Resets:** Contains at least 2 listener action prompts (`[Action]`) spaced every 3 minutes.

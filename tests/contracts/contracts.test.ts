@@ -15,8 +15,8 @@ describe("shared podcast contracts", () => {
         episodeSlug: "2026-08-18-first-story",
         language: "en",
         audience: "children-first-adult-friendly",
-        durationTargetMin: 12,
-        durationMaxMin: 15,
+        durationTargetMin: 5,
+        durationMaxMin: 8,
         currentStage: "ready"
       })
     ).not.toThrow();
@@ -66,7 +66,7 @@ describe("shared podcast contracts", () => {
         { heading: "The beginning", body: "A city wanted a new place to learn." }
       ],
       closing: "That is why this story still matters today.",
-      estimatedDurationMin: 12,
+      estimatedDurationMin: 5,
       ttsNotes: ["Warm pacing", "Pause after opening"]
     });
 

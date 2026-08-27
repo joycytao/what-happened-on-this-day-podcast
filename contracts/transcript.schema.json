@@ -18,7 +18,7 @@
       }
     },
     "closing": { "type": "string" },
-    "estimatedDurationMin": { "type": "number", "minimum": 10, "maximum": 15 },
+    "estimatedDurationMin": { "type": "number", "minimum": 5, "maximum": 8 },
     "ttsNotes": { "type": "array", "items": { "type": "string" } }
   },
   "required": ["opening", "segments", "closing", "estimatedDurationMin", "ttsNotes"],

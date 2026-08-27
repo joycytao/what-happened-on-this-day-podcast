@@ -27,8 +27,8 @@ describe("pm agent intake", () => {
         "- episode_slug: 2026-08-24-daily-episode",
         "- language: en",
         "- audience: children-first-adult-friendly",
-        "- duration_target_min: 12",
-        "- duration_max_min: 15",
+        "- duration_target_min: 5",
+        "- duration_max_min: 8",
         "- selected_angle:",
         "- entity_type:",
         "- current_stage: ready",
@@ -100,8 +100,8 @@ describe("pm agent intake", () => {
           "episode_slug: 2026-08-18-a-museum-opens",
           "language: en",
           "audience: children-first-adult-friendly",
-          "duration_target_min: 12",
-          "duration_max_min: 15",
+          "duration_target_min: 5",
+          "duration_max_min: 8",
           "current_stage: ready"
         ].join("\n"),
         labels: ["type:episode", "status:ready"]
@@ -119,8 +119,8 @@ describe("pm agent intake", () => {
       episodeSlug: "2026-08-18-a-museum-opens",
       language: "en",
       audience: "children-first-adult-friendly",
-      durationTargetMin: 12,
-      durationMaxMin: 15,
+      durationTargetMin: 5,
+      durationMaxMin: 8,
       currentStage: "ready"
     });
 

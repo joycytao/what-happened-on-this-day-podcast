@@ -23,7 +23,7 @@ These local specs override older generic age-band guidance where they are more s
 Writer-agent must produce a daily solo monologue script for the "What Happened On This Day" franchise:
 
 - target audience: kids aged 7-10
-- target length: 10-12 minutes, about 2,000-2,400 words unless PM provides a narrower limit
+- target length: 5-8 minutes unless PM provides a narrower limit
 - host persona: energetic, curious, time-traveling science detective
 - tone: warm, peer-to-peer, direct second-person address
 - banned style: baby talk, condescending phrasing, reduplicative words, dry academic lecturing

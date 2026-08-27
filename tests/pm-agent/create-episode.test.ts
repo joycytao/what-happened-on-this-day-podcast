@@ -12,8 +12,8 @@ describe("pm agent episode creation", () => {
       date: "2026-08-24",
       language: "en",
       audience: "children-first-adult-friendly",
-      durationTargetMin: 12,
-      durationMaxMin: 15,
+      durationTargetMin: 5,
+      durationMaxMin: 8,
       currentStage: "ready"
     });
   });
@@ -23,8 +23,8 @@ describe("pm agent episode creation", () => {
       date: "2026-08-24",
       language: "en",
       audience: "children-first-adult-friendly",
-      durationTargetMin: 12,
-      durationMaxMin: 15,
+      durationTargetMin: 5,
+      durationMaxMin: 8,
       currentStage: "ready"
     });
 
@@ -108,8 +108,8 @@ describe("pm agent episode creation", () => {
             episodeSlug: "2026-08-24-august-24-2026",
             language: "en",
             audience: "children-first-adult-friendly",
-            durationTargetMin: 12,
-            durationMaxMin: 15,
+            durationTargetMin: 5,
+            durationMaxMin: 8,
             currentStage: "ready"
           }
         }),

@@ -2,7 +2,7 @@
 
 ## Summary
 
-This repository hosts a dedicated production team for a daily "What Happened On This Day" podcast. The show is an English-language, single-story deep dive for children first and adults second. Each episode should run for 10-15 minutes, never exceed 15 minutes, and turn one date-linked historical subject into a complete story with a clear beginning, middle, and end.
+This repository hosts a dedicated production team for a daily "What Happened On This Day" podcast. The show is an English-language, single-story deep dive for children first and adults second. Each episode should run for 5-8 minutes, never exceed 8 minutes, and turn one date-linked historical subject into a complete story with a clear beginning, middle, and end.
 
 The repository does not contain the global Studio Chef orchestrator. Studio Chef lives above this repository and can activate this team when the user starts or continues the project. Inside this repository, a PM agent coordinates episode execution from intake through review.
 
@@ -24,8 +24,8 @@ The repository does not contain the global Studio Chef orchestrator. Studio Chef
 
 - Language: English
 - Format: Single-story deep dive
-- Duration target: 10-15 minutes
-- Duration hard ceiling: 15 minutes
+- Duration target: 5-8 minutes
+- Duration hard ceiling: 8 minutes
 - Audience: Children-safe, adult-friendly
 - Focus type: Balanced across person, event, or object depending on story quality
 - Structure:
@@ -172,7 +172,7 @@ The research agent should evaluate multiple candidates for the date and choose o
 
 - Story quality
 - Clarity for children
-- Room for a 10-15 minute narrative
+- Room for a 5-8 minute narrative
 - Modern relevance
 - Suitability for a person, event, or object lens
 

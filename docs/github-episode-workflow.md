@@ -188,8 +188,8 @@ When only a date is provided, the PM agent should populate at least:
 - `episode_slug`
 - `language: en`
 - `audience: children-first-adult-friendly`
-- `duration_target_min: 12`
-- `duration_max_min: 15`
+- `duration_target_min: 5`
+- `duration_max_min: 8`
 - `current_stage: ready`
 - `selected_angle:` blank until research decides
 - `entity_type:` blank until research decides
@@ -200,8 +200,8 @@ When only a date is provided, the PM agent should populate at least:
 These rules come from the project spec and should be treated as defaults unless explicitly overridden:
 
 - format is `single-story deep dive`
-- target duration is `10-15 minutes`
-- hard ceiling is `15 minutes`
+- target duration is `5-8 minutes`
+- hard ceiling is `8 minutes`
 - language is `English`
 - audience is `children-first, adult-friendly`
 - the story can focus on a `person`, `event`, or `object`
@@ -230,8 +230,8 @@ Recommended body:
 - episode_slug: 2026-08-19
 - language: en
 - audience: children-first-adult-friendly
-- duration_target_min: 12
-- duration_max_min: 15
+- duration_target_min: 5
+- duration_max_min: 8
 - selected_angle:
 - entity_type:
 - current_stage: ready

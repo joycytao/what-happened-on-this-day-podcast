@@ -38,7 +38,7 @@ This SOP defines how writer-agent should prepare podcast scripts for producer-ag
    [Action: physical prompt]
    ```
 
-8. Keep the target length at 10-12 minutes, about 2,000-2,400 words, unless PM gives a narrower constraint.
+8. Keep the target length at 5-8 minutes unless PM gives a narrower constraint.
 9. Add at least one everyday metaphor in the science module.
 10. Add listener attention resets at least every 3 minutes.
 11. Add `[SFX]` or `[BGM]` transitions every 45-60 seconds.
