@@ -13,7 +13,11 @@ This SOP defines how producer-agent should handle narration, production cues, an
    - `skills/kids-podcast-spec/SKILL.md`
    - `skills/kids-podcast-production-spec/SKILL.md`
 
-3. Treat the configured speech engine as the narration engine. The current repo has a Voicebox stub; the production target spec is Qwen3-TTS.
+3. Treat the configured speech engine as the narration engine. Voicebox supports two explicit modes:
+
+   - `dry-run`: writes clearly marked stub output for local pipeline tests only.
+   - `production`: calls the local Voicebox HTTP API and fails clearly if Voicebox is unavailable.
+
 4. Scan the transcript opening, segment bodies, and closing for production cues in these forms:
 
    ```md
@@ -29,6 +33,38 @@ This SOP defines how producer-agent should handle narration, production cues, an
 7. Produce or preserve the final audio path as `audio/final.mp3`.
 8. Check production QA from the local production spec.
 9. Report cue count, cue types, mastering status, voice engine status, and any unresolved cue requirements in the production result or handoff notes.
+
+## Real Voicebox Render Preflight
+
+Before running `configs/voicebox.json` with `"mode": "production"`, verify:
+
+- Voicebox desktop app is installed and running on the same machine.
+- The configured `baseUrl` is reachable, normally `http://127.0.0.1:17493`.
+- The configured `voiceProfile` exists for `POST /speak`, or `profileId` exists for `POST /generate`.
+- The configured `ttsEngine`, `modelSize`, `seed`, `instruct`, and `language` match the intended render.
+- First-use model downloads have already been warmed up when a scheduled render cannot wait.
+
+The producer must not silently replace a failed production render with stub audio. A failed real render should leave render metadata with endpoint, engine, profile, seed, fallback/error status, and the failure reason.
+
+## Real Voicebox Render Procedure
+
+1. Load and validate `configs/voicebox.json`.
+2. Build narration text from the transcript by removing production markup before sending text to Voicebox:
+
+   ```md
+   [SFX: ...]
+   [BGM: ...]
+   [Voice: ...]
+   [Pause ...]
+   [Action: ...]
+   ```
+
+3. Preserve extracted cues in `audio/sfx-manifest.json`.
+4. For `endpoint: "speak"`, call `POST /speak` with narration `text`, `profile`, `engine`, `personality: false`, and `language`.
+5. For `endpoint: "generate"`, call `POST /generate` only when `profileId` is configured, including `profile_id`, `text`, `language`, `seed`, `model_size`, `instruct`, `engine`, and `max_chunk_chars` when available.
+6. Poll or retrieve generated audio according to the Voicebox response.
+7. Persist the returned narration audio to the run directory.
+8. Write `audio/render-metadata.json` with endpoint, client id, engine id, model size, profile, seed, generation id, source audio path, output audio path, status, and any error/fallback status.
 
 ## Cue Parsing Rules
 

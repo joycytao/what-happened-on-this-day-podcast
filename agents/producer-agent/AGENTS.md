@@ -18,7 +18,7 @@ The production spec defines the target local AI voice engine, sound design stand
 
 ## Voicebox and SFX Responsibilities
 
-Use the configured voice engine for narration speech generation. The current repo has a Voicebox stub, while the repo-local production spec defines Qwen3-TTS as the target local offline production engine. Do not rely on the speech engine to directly generate arbitrary non-speech podcast SFX such as bells, clock ticks, whooshes, or time-machine transitions.
+Use the configured voice engine for narration speech generation. Voicebox dry-run mode may write clearly marked stub output for tests, but production mode must call the local Voicebox HTTP API or fail explicitly. The repo-local production spec defines Qwen3-TTS as the target local offline production engine. Do not rely on the speech engine to directly generate arbitrary non-speech podcast SFX such as bells, clock ticks, whooshes, or time-machine transitions.
 
 When transcript text contains production cues, producer-agent must preserve them for review and future reruns:
 
