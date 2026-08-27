@@ -5,6 +5,13 @@ import { describe, expect, it } from "vitest";
 import { runProducerAgent } from "../../agents/producer-agent";
 import { extractProductionCues } from "../../agents/producer-agent/sfx-cues";
 import { resolveProductionCues } from "../../agents/producer-agent/sfx-resolver.js";
+import {
+  buildVoiceboxRequest,
+  prepareNarrationText,
+  renderWithVoicebox,
+  validateVoiceboxConfig,
+  type VoiceboxConfig
+} from "../../agents/producer-agent/voicebox-adapter.js";
 
 describe("producer agent", () => {
   it("creates audio metadata from a transcript", async () => {
@@ -75,6 +82,40 @@ describe("producer agent", () => {
         durationSeconds: null,
         placement: "segment: A bright chime",
         sourceText: "[SFX: soft bell chime]"
+      }
+    ]);
+  });
+
+  it("preserves voice and action cues for producer review", () => {
+    const cues = extractProductionCues({
+      opening: "[Voice: bright whisper]\nOpen the door.",
+      segments: [
+        {
+          heading: "Try it",
+          body: "Now move your hand. [Action: point to the nearest screen]"
+        }
+      ],
+      closing: "Back to today.",
+      estimatedDurationMin: 12,
+      ttsNotes: []
+    });
+
+    expect(cues).toEqual([
+      {
+        id: "cue-1",
+        type: "voice",
+        description: "bright whisper",
+        durationSeconds: null,
+        placement: "opening",
+        sourceText: "[Voice: bright whisper]"
+      },
+      {
+        id: "cue-2",
+        type: "action",
+        description: "point to the nearest screen",
+        durationSeconds: null,
+        placement: "segment: Try it",
+        sourceText: "[Action: point to the nearest screen]"
       }
     ]);
   });
@@ -275,5 +316,220 @@ describe("producer agent", () => {
         audioArtifact: null
       })
     ]);
+  });
+
+  it("validates real Voicebox render configuration", () => {
+    const config = validateVoiceboxConfig({
+      engine: "voicebox",
+      mode: "production",
+      baseUrl: "http://127.0.0.1:17493",
+      endpoint: "speak",
+      ttsEngine: "qwen_custom_voice",
+      modelSize: "1.7B",
+      voiceProfile: "story-narrator-01",
+      seed: 4262026,
+      instruct: "warm, energetic narrator",
+      language: "en",
+      outputFormat: "mp3",
+      enableVoiceCloning: false
+    });
+
+    expect(config).toMatchObject({
+      mode: "production",
+      endpoint: "speak",
+      ttsEngine: "qwen_custom_voice",
+      modelSize: "1.7B",
+      voiceProfile: "story-narrator-01"
+    });
+
+    expect(() =>
+      validateVoiceboxConfig({
+        engine: "voicebox",
+        mode: "production",
+        endpoint: "speak",
+        ttsEngine: "qwen_custom_voice",
+        voiceProfile: "story-narrator-01",
+        language: "en"
+      })
+    ).toThrow(/baseUrl/);
+  });
+
+  it("prepares narration text without production cues", () => {
+    const narrationText = prepareNarrationText({
+      opening: "[BGM: curious bed]\n[Voice: whisper]\nWelcome to the launch. [PAUSE: 1s]",
+      segments: [
+        {
+          heading: "Start",
+          body: "Click the button. [SFX: soft click]\n[Action: point to the screen]"
+        }
+      ],
+      closing: "Back to today. [SFX: time machine powers down]"
+    });
+
+    expect(narrationText).toBe("Welcome to the launch.\n\nClick the button.\n\nBack to today.");
+  });
+
+  it("builds Voicebox speak and generate REST requests", () => {
+    const speakConfig: VoiceboxConfig = validateVoiceboxConfig({
+      engine: "voicebox",
+      mode: "production",
+      baseUrl: "http://127.0.0.1:17493",
+      endpoint: "speak",
+      clientId: "what-happened-producer",
+      ttsEngine: "qwen_custom_voice",
+      modelSize: "1.7B",
+      voiceProfile: "story-narrator-01",
+      seed: 4262026,
+      instruct: "warm, energetic narrator",
+      language: "en",
+      outputFormat: "mp3",
+      enableVoiceCloning: false
+    });
+
+    expect(buildVoiceboxRequest(speakConfig, "Hello there.")).toEqual({
+      url: "http://127.0.0.1:17493/speak",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Voicebox-Client-Id": "what-happened-producer"
+      },
+      body: {
+        text: "Hello there.",
+        profile: "story-narrator-01",
+        engine: "qwen_custom_voice",
+        personality: false,
+        language: "en"
+      }
+    });
+
+    const generateConfig: VoiceboxConfig = validateVoiceboxConfig({
+      ...speakConfig,
+      endpoint: "generate",
+      profileId: "profile-123",
+      maxChunkChars: 800
+    });
+
+    expect(buildVoiceboxRequest(generateConfig, "Hello there.")).toMatchObject({
+      url: "http://127.0.0.1:17493/generate",
+      body: {
+        profile_id: "profile-123",
+        text: "Hello there.",
+        language: "en",
+        seed: 4262026,
+        model_size: "1.7B",
+        instruct: "warm, energetic narrator",
+        engine: "qwen_custom_voice",
+        max_chunk_chars: 800
+      }
+    });
+  });
+
+  it("fails clearly when production Voicebox is unavailable", async () => {
+    const outputDir = await fs.mkdtemp(path.join(os.tmpdir(), "producer-agent-"));
+
+    await expect(
+      renderWithVoicebox(
+        {
+          voicePreset: "story-narrator-01",
+          outputAudioPath: path.join(outputDir, "final.mp3"),
+          transcript: {
+            opening: "Hello. [SFX: bell]",
+            segments: [{ heading: "Start", body: "The story begins." }],
+            closing: "Goodbye.",
+            estimatedDurationMin: 12,
+            ttsNotes: []
+          }
+        },
+        {
+          config: validateVoiceboxConfig({
+            engine: "voicebox",
+            mode: "production",
+            baseUrl: "http://127.0.0.1:17493",
+            endpoint: "speak",
+            ttsEngine: "qwen_custom_voice",
+            modelSize: "1.7B",
+            voiceProfile: "story-narrator-01",
+            seed: 4262026,
+            instruct: "warm, energetic narrator",
+            language: "en",
+            outputFormat: "mp3",
+            enableVoiceCloning: false
+          }),
+          fetch: async () => {
+            throw new TypeError("fetch failed");
+          }
+        }
+      )
+    ).rejects.toThrow(/Voicebox REST request failed/);
+
+    await expect(fs.stat(path.join(outputDir, "final.mp3"))).rejects.toThrow();
+    const metadata = JSON.parse(await fs.readFile(path.join(outputDir, "render-metadata.json"), "utf8"));
+    expect(metadata.voicebox.status).toBe("failed");
+    expect(metadata.voicebox.error).toContain("fetch failed");
+  });
+
+  it("persists real Voicebox audio bytes and render metadata", async () => {
+    const outputDir = await fs.mkdtemp(path.join(os.tmpdir(), "producer-agent-"));
+    const sourceAudioPath = path.join(outputDir, "voicebox-source.mp3");
+    const audioBytes = new TextEncoder().encode("ID3real mp3 bytes");
+    await fs.writeFile(sourceAudioPath, audioBytes);
+
+    const result = await renderWithVoicebox(
+      {
+        voicePreset: "story-narrator-01",
+        outputAudioPath: path.join(outputDir, "final.mp3"),
+        transcript: {
+          opening: "[Voice: bright]\nHello. [SFX: bell]",
+          segments: [{ heading: "Start", body: "The story begins. [PAUSE: 1s]" }],
+          closing: "Goodbye.",
+          estimatedDurationMin: 12,
+          ttsNotes: []
+        }
+      },
+      {
+        config: validateVoiceboxConfig({
+          engine: "voicebox",
+          mode: "production",
+          baseUrl: "http://127.0.0.1:17493",
+          endpoint: "speak",
+          clientId: "what-happened-producer",
+          ttsEngine: "qwen_custom_voice",
+          modelSize: "1.7B",
+          voiceProfile: "story-narrator-01",
+          seed: 4262026,
+          instruct: "warm, energetic narrator",
+          language: "en",
+          outputFormat: "mp3",
+          enableVoiceCloning: false
+        }),
+        fetch: async () =>
+          new Response(
+            JSON.stringify({
+              generation_id: "gen-123",
+              audio_path: sourceAudioPath
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          )
+      }
+    );
+
+    await expect(fs.readFile(result.audioPath).then((bytes: Uint8Array) => Array.from(bytes))).resolves.toEqual(
+      Array.from(audioBytes)
+    );
+    const metadata = JSON.parse(await fs.readFile(result.metadataPath, "utf8"));
+
+    expect(metadata.voicebox).toMatchObject({
+      status: "succeeded",
+      endpoint: "speak",
+      baseUrl: "http://127.0.0.1:17493",
+      clientId: "what-happened-producer",
+      ttsEngine: "qwen_custom_voice",
+      modelSize: "1.7B",
+      voiceProfile: "story-narrator-01",
+      seed: 4262026,
+      instruct: "warm, energetic narrator",
+      generationId: "gen-123",
+      sourceAudioPath
+    });
+    expect(metadata.voicebox.narrationText).toBe("Hello.\n\nThe story begins.\n\nGoodbye.");
   });
 });

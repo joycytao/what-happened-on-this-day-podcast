@@ -1,6 +1,19 @@
 {
   "engine": "voicebox",
+  "mode": "dry-run",
+  "baseUrl": "http://127.0.0.1:17493",
+  "endpoint": "speak",
+  "clientId": "what-happened-on-this-day-producer",
+  "ttsEngine": "qwen_custom_voice",
+  "modelSize": "1.7B",
+  "voiceProfile": "story-narrator-01",
   "voicePreset": "story-narrator-01",
+  "seed": 4262026,
+  "instruct": "warm, energetic, curious time-traveling science detective",
+  "language": "en",
   "outputFormat": "mp3",
-  "enableVoiceCloning": false
+  "enableVoiceCloning": false,
+  "maxChunkChars": 800,
+  "timeoutMs": 120000,
+  "pollIntervalMs": 1000
 }

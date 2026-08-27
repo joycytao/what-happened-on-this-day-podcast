@@ -2,14 +2,14 @@ import type { Transcript } from "../../src/contracts";
 
 export type ProductionCue = {
   id: string;
-  type: "sfx" | "bgm" | "pause";
+  type: "sfx" | "bgm" | "pause" | "voice" | "action";
   description: string;
   durationSeconds: number | null;
   placement: string;
   sourceText: string;
 };
 
-const cuePattern = /\[(SFX|BGM|PAUSE):\s*([^\]]+)\]/gi;
+const cuePattern = /\[(SFX|BGM|PAUSE|Voice|Action):\s*([^\]]+)\]/gi;
 const durationPattern = /(?:^|,\s*)(\d+(?:\.\d+)?)\s*s(?:ec|econds?)?\b/i;
 
 export function extractProductionCues(transcript: Transcript): ProductionCue[] {

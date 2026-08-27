@@ -4,7 +4,7 @@ export type SynthesisKind = "bell" | "clock-tick" | "time-machine-hum" | "whoosh
 
 export type ResolvedProductionCue = ProductionCue & {
   status: "resolved" | "unresolved";
-  sourceStrategy: "local-synthesis" | "silence" | "unsupported-cue";
+  sourceStrategy: "local-synthesis" | "silence" | "production-instruction" | "unsupported-cue";
   synthesisKind: SynthesisKind | null;
   fallbackStatus: "none" | "needs-sfx-library-or-provider";
   audioArtifact: string | null;
@@ -55,6 +55,17 @@ function resolveProductionCue(cue: ProductionCue): ResolvedProductionCue {
         audioArtifact: `sfx/${cue.id}-${preset.kind}.wav`
       };
     }
+  }
+
+  if (cue.type === "voice" || cue.type === "action") {
+    return {
+      ...cue,
+      status: "resolved",
+      sourceStrategy: "production-instruction",
+      synthesisKind: null,
+      fallbackStatus: "none",
+      audioArtifact: null
+    };
   }
 
   return {
