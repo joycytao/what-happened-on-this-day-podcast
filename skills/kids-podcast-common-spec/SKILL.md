@@ -2,7 +2,7 @@
 
 > **Version:** 3.6  
 > **Target Audience:** Kids Aged 7–10 (Elementary Schoolers)  
-> **Format:** Daily Solo Monologue (10–12 Minutes / ~2,000–2,400 Words)  
+> **Format:** Daily Solo Monologue (5-8 Minutes)
 > **Franchise Theme:** "What Happened On This Day" (Space, Biology, History, Inventions)  
 
 ---
@@ -22,9 +22,9 @@
 
 ---
 
-## 3. High-Level 10–12 Minute Episode Structure
+## 3. High-Level 5-8 Minute Episode Structure
 1. **0:00–1:30 (Module 1): Time Machine Hook** – Counter-intuitive question & time launch.
 2. **1:30–5:00 (Module 2): Narrative Drama** – Hero-vs-obstacle story with high stakes.
 3. **5:00–8:30 (Module 3): Scientific Deep-Dive** – Core concept in 2 steps + 1 everyday metaphor.
 4. **8:30–10:30 (Module 4): Modern World Twist** – Relatable impact + Myth busting.
-5. **10:30–12:00 (Module 5): Outro & Mission** – Summary + Safe offline observation task.
+5. **7:00-8:00 (Module 5): Outro & Mission** – Summary + Safe offline observation task.

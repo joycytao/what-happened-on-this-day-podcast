@@ -45,7 +45,7 @@ Use sound to replace explanation when possible. Mark frequent SFX opportunities,
 
 ### Control length and rhythm
 
-For elementary listeners, keep episodes within 10-15 minutes. Change a small unit or shift the audio mood every 3-5 minutes.
+For elementary listeners, keep episodes within 5-8 minutes. Change a small unit or shift the audio mood every 2-3 minutes.
 
 ### Avoid lecturing
 

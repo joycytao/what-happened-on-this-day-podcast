@@ -9,7 +9,7 @@
 
 - Target listeners are kids aged 7-10.
 - Episodes are daily solo monologues for the "What Happened On This Day" franchise.
-- Episodes should run 10-12 minutes, about 2,000-2,400 words unless PM gives a narrower constraint.
+- Episodes should run 5-8 minutes unless PM gives a narrower constraint.
 - The tone must be peer-to-peer, warm, energetic, and respectful.
 - Do not use baby talk, reduplicative words, condescending phrasing, or dry academic lecturing.
 

@@ -22,7 +22,7 @@ describe("producer agent", () => {
         opening: "Good morning to everyone on the way to school.",
         segments: [{ heading: "The beginning", body: "A city dreamed of a new museum." }],
         closing: "That dream still matters today.",
-        estimatedDurationMin: 12,
+        estimatedDurationMin: 5,
         ttsNotes: ["Warm pace"]
       },
       outputDir
@@ -46,7 +46,7 @@ describe("producer agent", () => {
         }
       ],
       closing: "Tomorrow, we listen again.",
-      estimatedDurationMin: 12,
+      estimatedDurationMin: 5,
       ttsNotes: ["Warm pace"]
     });
 
@@ -96,7 +96,7 @@ describe("producer agent", () => {
         }
       ],
       closing: "Back to today.",
-      estimatedDurationMin: 12,
+      estimatedDurationMin: 5,
       ttsNotes: []
     });
 
@@ -128,7 +128,7 @@ describe("producer agent", () => {
         opening: "Good morning. [SFX: time machine hum, 2s]",
         segments: [{ heading: "The beginning", body: "A clock ticks. [SFX: soft bell chime]" }],
         closing: "That dream still matters today.",
-        estimatedDurationMin: 12,
+        estimatedDurationMin: 5,
         ttsNotes: ["Warm pace"]
       },
       outputDir
@@ -163,7 +163,7 @@ describe("producer agent", () => {
           }
         ],
         closing: "Back to today.",
-        estimatedDurationMin: 12,
+        estimatedDurationMin: 5,
         ttsNotes: ["Warm pace"]
       },
       outputDir
@@ -235,7 +235,7 @@ describe("producer agent", () => {
         { heading: "Bell", body: "[SFX: soft bell chime]" }
       ],
       closing: "Done.",
-      estimatedDurationMin: 12,
+      estimatedDurationMin: 5,
       ttsNotes: []
     });
 
@@ -284,7 +284,7 @@ describe("producer agent", () => {
       opening: "[BGM: curious light pulse, under narration]",
       segments: [{ heading: "Mystery", body: "[PAUSE: 1s]\n[SFX: dragon roar, 3s]" }],
       closing: "Done.",
-      estimatedDurationMin: 12,
+      estimatedDurationMin: 5,
       ttsNotes: []
     });
 
@@ -435,7 +435,7 @@ describe("producer agent", () => {
             opening: "Hello. [SFX: bell]",
             segments: [{ heading: "Start", body: "The story begins." }],
             closing: "Goodbye.",
-            estimatedDurationMin: 12,
+            estimatedDurationMin: 5,
             ttsNotes: []
           }
         },
@@ -481,7 +481,7 @@ describe("producer agent", () => {
           opening: "[Voice: bright]\nHello. [SFX: bell]",
           segments: [{ heading: "Start", body: "The story begins. [PAUSE: 1s]" }],
           closing: "Goodbye.",
-          estimatedDurationMin: 12,
+          estimatedDurationMin: 5,
           ttsNotes: []
         }
       },

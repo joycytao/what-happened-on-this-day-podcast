@@ -18,6 +18,7 @@ describe("writer agent", () => {
 
     expect(transcript.opening.length).toBeGreaterThan(20);
     expect(transcript.segments.length).toBeGreaterThanOrEqual(3);
-    expect(transcript.estimatedDurationMin).toBeLessThanOrEqual(15);
+    expect(transcript.estimatedDurationMin).toBeGreaterThanOrEqual(5);
+    expect(transcript.estimatedDurationMin).toBeLessThanOrEqual(8);
   });
 });

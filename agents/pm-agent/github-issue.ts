@@ -23,7 +23,7 @@ type EpisodeDateInput = {
   language?: "en";
   audience?: "children-first-adult-friendly";
   durationTargetMin?: number;
-  durationMaxMin?: 15;
+  durationMaxMin?: 8;
   currentStage?: EpisodeRequest["currentStage"];
 };
 
@@ -54,8 +54,8 @@ export function resolveEpisodeDateInput(input: EpisodeDateInput): EpisodeRequest
     episodeSlug: `${input.date}-${titleSlug}`,
     language: input.language ?? "en",
     audience: input.audience ?? "children-first-adult-friendly",
-    durationTargetMin: input.durationTargetMin ?? 12,
-    durationMaxMin: input.durationMaxMin ?? 15,
+    durationTargetMin: input.durationTargetMin ?? 5,
+    durationMaxMin: input.durationMaxMin ?? 8,
     currentStage: input.currentStage ?? "ready"
   });
 }
@@ -101,8 +101,8 @@ function buildBriefEpisodeIssueDraft(brief: EpisodeBrief): EpisodeIssueDraft {
       `- episode_slug: ${episodeSlug}`,
       "- language: en",
       "- audience: children-first-adult-friendly",
-      "- duration_target_min: 12",
-      "- duration_max_min: 15",
+      "- duration_target_min: 5",
+      "- duration_max_min: 8",
       "- selected_angle:",
       "- entity_type:",
       "- current_stage: ready",
@@ -422,8 +422,8 @@ export function resolveEpisodeRequest(issue: EpisodeIssue) {
     episodeSlug: fields.episode_slug,
     language: fields.language ?? "en",
     audience: fields.audience ?? "children-first-adult-friendly",
-    durationTargetMin: Number(fields.duration_target_min ?? 12),
-    durationMaxMin: 15,
+    durationTargetMin: Number(fields.duration_target_min ?? 5),
+    durationMaxMin: 8,
     selectedAngle: fields.selected_angle || undefined,
     entityType: fields.entity_type || undefined,
     currentStage: fields.current_stage ?? "ready"

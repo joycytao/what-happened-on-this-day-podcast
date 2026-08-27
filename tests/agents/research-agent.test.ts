@@ -11,8 +11,8 @@ describe("research agent", () => {
       episodeSlug: "2026-08-18-a-museum-opens",
       language: "en",
       audience: "children-first-adult-friendly",
-      durationTargetMin: 12,
-      durationMaxMin: 15,
+      durationTargetMin: 5,
+      durationMaxMin: 8,
       currentStage: "researching"
     });
 
@@ -30,8 +30,8 @@ describe("research agent", () => {
         episodeSlug: "2026-08-18-a-museum-opens",
         language: "en",
         audience: "children-first-adult-friendly",
-        durationTargetMin: 12,
-        durationMaxMin: 15,
+        durationTargetMin: 5,
+        durationMaxMin: 8,
         currentStage: "researching"
       },
       { runDir }

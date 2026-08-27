@@ -42,8 +42,8 @@ For dated episode requests, the PM agent creates one `type:episode` issue with:
 
 - `language: en`
 - `audience: children-first-adult-friendly`
-- `duration_target_min: 12`
-- `duration_max_min: 15`
+- `duration_target_min: 5`
+- `duration_max_min: 8`
 - `current_stage: ready`
 - `episode_slug: <date-based slug>`
 - `type:episode` label

@@ -5,8 +5,8 @@ export const episodeRequestSchema = z.object({
   episodeSlug: z.string(),
   language: z.literal("en"),
   audience: z.literal("children-first-adult-friendly"),
-  durationTargetMin: z.number().min(10).max(15),
-  durationMaxMin: z.literal(15),
+  durationTargetMin: z.number().min(5).max(8),
+  durationMaxMin: z.literal(8),
   selectedAngle: z.string().optional(),
   entityType: z.enum(["person", "event", "object"]).optional(),
   currentStage: z.enum(["ready", "researching", "writing", "producing", "review", "done", "blocked"])
@@ -58,7 +58,7 @@ export const transcriptSchema = z.object({
     })
   ).min(1),
   closing: z.string(),
-  estimatedDurationMin: z.number().min(10).max(15),
+  estimatedDurationMin: z.number().min(5).max(8),
   ttsNotes: z.array(z.string())
 });
 

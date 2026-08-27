@@ -19,7 +19,7 @@ export function buildTranscript(dossier: Pick<ResearchDossier, "chosenSubject" |
       }
     ],
     closing: `And that is how this story still reaches us today: ${dossier.modernRelevance}`,
-    estimatedDurationMin: 12,
+    estimatedDurationMin: 5,
     ttsNotes: ["Warm pace", "Gentle pause after opening", "Lift energy in the turning point"]
   });
 }
