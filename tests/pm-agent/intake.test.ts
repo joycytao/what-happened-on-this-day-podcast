@@ -66,6 +66,35 @@ describe("pm agent intake", () => {
     ).toContain("- current_stage: researching\n- output_run_path: runs/2026-08-24-daily-episode");
   });
 
+  it("updates plain episode issue metadata without duplicating context fields", () => {
+    const originalBody = [
+      "date: 2026-08-24",
+      "episode_slug: 2026-08-24-august-24-2026",
+      "language: en",
+      "audience: children-first-adult-friendly",
+      "duration_target_min: 5",
+      "duration_max_min: 8",
+      "current_stage: ready"
+    ].join("\n");
+
+    expect(
+      buildEpisodeIssueContextBody(originalBody, {
+        currentStage: "review",
+        outputRunPath: "runs/2026-08-24-august-24-2026"
+      })
+    ).toBe([
+      "date: 2026-08-24",
+      "episode_slug: 2026-08-24-august-24-2026",
+      "language: en",
+      "audience: children-first-adult-friendly",
+      "duration_target_min: 5",
+      "duration_max_min: 8",
+      "current_stage: review",
+      "output_run_path: runs/2026-08-24-august-24-2026",
+      ""
+    ].join("\n"));
+  });
+
   it("builds a research package issue comment only when all required files exist", async () => {
     const runDir = await fs.mkdtemp(path.join(os.tmpdir(), "podcast-research-package-"));
     await fs.mkdir(path.join(runDir, "references"), { recursive: true });
