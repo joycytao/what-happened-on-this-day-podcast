@@ -30,10 +30,29 @@ import { triageFeatureRequest, type FeatureIntakeInput } from "./feature-intake"
 import { createRunManifest } from "./run-manifest";
 import { parseCliArgs } from "../../src/lib/cli";
 import { createLogger } from "../../src/lib/logger";
+import { transcriptSchema, type Transcript } from "../../src/contracts";
 
 export { resolveEpisodeRequest, createRunManifest };
 
 type ProducerResult = Awaited<ReturnType<typeof runProducerAgent>>;
+type WriterAgent = (dossier: Awaited<ReturnType<typeof runResearchAgent>>, options?: { runDir?: string }) => Promise<Transcript>;
+type ProducerAgent = typeof runProducerAgent;
+
+export async function assertWriterTranscriptArtifact(runDir: string) {
+  const transcriptPath = path.join(runDir, "transcript.json");
+
+  try {
+    transcriptSchema.parse(JSON.parse(await fs.readFile(transcriptPath, "utf8")));
+  } catch (error) {
+    throw new Error(
+      `Writer transcript artifact is incomplete: ${transcriptPath}${
+        error instanceof Error ? ` (${error.message})` : ""
+      }`
+    );
+  }
+
+  return transcriptPath;
+}
 
 export async function assertReviewableEpisodeAudio(result: ProducerResult) {
   const metadata = JSON.parse(await fs.readFile(result.metadataPath, "utf8")) as {
@@ -70,6 +89,8 @@ export async function runEpisodePipeline(input: {
   createEpisodeIssue?: (draft: EpisodeIssueDraft) => Promise<EpisodeIssue>;
   updateEpisodeIssueContext?: (issue: EpisodeIssue, updates: EpisodeIssueContextUpdates) => Promise<EpisodeIssue>;
   uploadResearchPackage?: (input: { issue: EpisodeIssue; runDir: string }) => Promise<void>;
+  runWriterAgent?: WriterAgent;
+  runProducerAgent?: ProducerAgent;
   repo?: string;
 } = {}) {
   const issue =
@@ -96,8 +117,9 @@ export async function runEpisodePipeline(input: {
     currentStage: "writing",
     outputRunPath
   });
-  const transcript = await runWriterAgent(dossier);
-  const producerResult = await runProducerAgent(transcript, `${runDir}/audio`);
+  const transcript = await (dependencies.runWriterAgent ?? runWriterAgent)(dossier, { runDir });
+  await assertWriterTranscriptArtifact(runDir);
+  const producerResult = await (dependencies.runProducerAgent ?? runProducerAgent)(transcript, `${runDir}/audio`);
   await assertReviewableEpisodeAudio(producerResult);
   currentIssue = await updateEpisodeIssueContext(currentIssue, {
     currentStage: "review",
