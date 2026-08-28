@@ -12,8 +12,9 @@ It must read and follow:
 The PM agent must:
 
 - convert user or Studio Chef requests into GitHub issue-driven work
-- create `type:episode` issues before any dated episode production starts
-- pick up ready episode issues and pass structured artifacts downstream
+- create episode workflow issues before any dated episode production starts
+- create episode issues with `status:ready` and `agent:research`
+- validate merged artifacts and advance stage labels
 - update GitHub issue context when workflow state changes
 - package required research artifacts onto the episode issue before moving past research
 - package spike outcome artifacts onto spike project issues before marking them review-ready
@@ -32,13 +33,13 @@ It must:
 - use pyramid principle when reporting its decision
 - inspect existing GitHub issues, pull requests, and main branch signals
 - decide whether the work already exists
-- classify dated podcast generation as `type:episode`
-- classify workflow, prompt, integration, tooling, and system work as `type:project`
+- identify dated podcast generation as episode workflow work
+- keep workflow, prompt, integration, tooling, and system work outside episode agent routing unless the issue explicitly implements that routing
 - create a spike ticket first when feasibility is unknown
 
 ## Episode Issue Rules
 
-For dated episode requests, the PM agent creates one `type:episode` issue with:
+For dated episode requests, the PM agent creates one episode workflow issue with:
 
 - `language: en`
 - `audience: children-first-adult-friendly`
@@ -46,14 +47,18 @@ For dated episode requests, the PM agent creates one `type:episode` issue with:
 - `duration_max_min: 8`
 - `current_stage: ready`
 - `episode_slug: <date-based slug>`
-- `type:episode` label
 - `status:ready` label
+- `agent:research` label
 
 Downstream work may only begin after this issue exists.
 
 ## Handoff Rules
 
-The PM agent passes work downstream through structured files and issue context, not informal chat instructions.
+The PM agent does not pass work downstream by direct function call or informal chat instruction. The target workflow uses GitHub issue labels and merged artifacts:
+
+- scheduled role agents pick issues only when the issue has their matching `agent:*` label
+- each role agent writes artifacts on a branch and opens a PR
+- PM advances to the next `agent:*` only after the PR is merged and artifacts pass validation on main
 
 Research is not complete until these files exist and have been attached to the GitHub issue:
 
@@ -68,13 +73,13 @@ Writing is not complete until both writer artifacts exist and pass PM validation
 
 The PM agent must validate `transcript.json` with the transcript schema, then verify the quality report and independently recompute deterministic quality checks before passing work to producer-agent. The PM agent must not pass a transcript to producer-agent when the quality report is missing, failed, or inconsistent with the transcript content.
 
-## Project Issue Completion Rules
+## System Issue Completion Rules
 
-For `type:project` issues, the PM agent must distinguish normal implementation work from spikes.
+For system, refactor, and spike issues, the PM agent must distinguish normal implementation work from spikes.
 
 Normal project issues are complete only after the corresponding implementation PR has been merged. Once the merged PR is verified, the PM agent may mark the issue complete and close it.
 
-For `type:project` spike issues, the PM agent must not hand off to downstream episode agents and must not change the issue to `status:researching`; the spike itself is the ready work.
+For spike issues, the PM agent must not hand off to downstream episode agents and must not change the issue to `status:researching`; the spike itself is the ready work.
 
 Spike project issues are complete only after the spike outcome is preserved as a future reference. The PM agent must attach or embed the spike outcome on the issue before moving the spike to `status:review`. A spike without an attached or embedded outcome document is not complete.
 
@@ -89,4 +94,5 @@ The PM agent must not:
 - write the podcast script
 - produce audio
 - bypass GitHub issue status labels
+- add episode `agent:*` routing labels to ordinary project/refactor issues
 - guess missing requirements

@@ -21,9 +21,11 @@ Do not collapse these roles into one agent. The PM agent coordinates; it does no
 
 ## PM Agent Operating Model
 
-The PM agent is issue-first.
+The PM agent is issue-first and gatekeeper-owned.
 
-When a user provides a date for an episode, the PM agent must create or use a GitHub `type:episode` issue before downstream work starts. Raw date briefs should not be passed directly to research, writing, or production.
+When a user provides a date for an episode, the PM agent must create or use a GitHub issue before episode work starts. Raw date briefs should not be passed directly to research, writing, or production.
+
+Episode workflow routing is controlled by `agent:*` labels, not `type:*` labels. The PM agent creates episode issues with `status:ready` and `agent:research`. Scheduled role agents must ignore issues unless the issue has their matching role label.
 
 ### New Feature Intake
 
@@ -39,7 +41,7 @@ The PM agent must:
 - inspect existing pull requests
 - inspect main-branch signals before creating new work
 - decide whether the work already exists
-- decide whether the request is `type:episode` or `type:project`
+- decide whether the request is episode production work, system work, or feasibility discovery
 - create a spike ticket first when feasibility is unknown
 
 Use:
@@ -55,7 +57,7 @@ Decision outcomes:
 - `create_ticket`: PM agent has enough information to create a normal ticket
 - `create_spike`: PM agent needs feasibility discovery before implementation
 
-Only dated podcast generation requests should become `type:episode`. System, workflow, integration, prompt, producer, tooling, and feasibility work should become `type:project`.
+Only dated podcast generation requests should enter the episode agent workflow. System, workflow, integration, prompt, producer, tooling, and feasibility work should stay outside episode agent routing unless their issue explicitly implements that workflow capability.
 
 ### Create Episode Ticket
 
@@ -69,8 +71,8 @@ The ticket must include:
 
 - episode metadata
 - project defaults
-- `type:episode`
 - `status:ready`
+- `agent:research`
 - blank context fields such as `selected_angle`, `entity_type`, and `output_run_path`
 - a required task checklist
 
@@ -129,26 +131,26 @@ Transcript work is not complete until this loop passes.
 
 ### Pick Up Episode Ticket
 
-Use:
+Current implementation note:
 
-```bash
-npm run pm-agent -- pickup-episode
-```
+The legacy PM pickup command may still exist while the workflow is being refactored. The target operating model is that PM does not directly run downstream agents. PM creates the issue, validates artifacts after PR merges, and advances labels.
 
-Useful options:
+Role agent pickup rules:
 
-- `--issue-number 8`
-- `--repo joycytao/what-happened-on-this-day-podcast`
+- `research-agent` may only pick issues with `agent:research`
+- `writer-agent` may only pick issues with `agent:writer`
+- `producer-agent` may only pick issues with `agent:producer`
+- issues without a matching `agent:*` label must be ignored by scheduled role agents
+- blocked issues must not be picked up until PM or a human relabels them
 
-Pickup rules:
+PM gatekeeper rules:
 
-- Select an open issue with `type:episode` and `status:ready`
 - Resolve the episode request from the issue body
 - Create the run directory
 - Write `episode-request.json`
 - Update issue context when workflow state changes
 - Upload the complete research package to the GitHub issue before moving to writing
-- Dispatch research, writing, and production in order
+- Advance to the next `agent:*` label only after the required artifacts exist and pass validation
 - Move the issue to `status:review` when the automated run is complete
 
 At minimum, context updates should maintain:
@@ -156,19 +158,19 @@ At minimum, context updates should maintain:
 - `current_stage`
 - `output_run_path`
 
-## GitHub Issue Types
+## GitHub Issue Routing
 
-Use `type:episode` for one podcast episode.
+Do not use `type:project` or `type:episode` as workflow requirements.
 
-Use `type:project` for system-building work, such as:
+Use `agent:*` labels only when an issue should be picked up by a scheduled episode role agent:
 
-- repo scaffolding
-- PM agent orchestration
-- contract or schema design
-- prompt improvements
-- Voicebox integration
+- `agent:research`
+- `agent:writer`
+- `agent:producer`
 
-The PM agent should not automatically process `type:project` issues as daily episodes.
+Project, refactor, spike, and documentation issues should not receive episode `agent:*` labels unless the issue is specifically about implementing that agent workflow capability.
+
+Every active episode workflow issue must have exactly one `status:*` label and at most one active `agent:*` label.
 
 ## Artifact Rules
 

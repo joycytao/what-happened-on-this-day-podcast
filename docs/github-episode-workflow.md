@@ -2,187 +2,136 @@
 
 ## Purpose
 
-This document defines how GitHub issues are used in the `what-happened-on-this-day-podcast` repository, what each label means, what project defaults the PM agent should apply automatically, and how a single `Episode` issue moves through the full workflow.
+This document defines how GitHub issues are used as the control plane for the `what-happened-on-this-day-podcast` episode workflow.
 
-This is an operations document. It does not replace the system design spec. It explains how the team should behave day to day.
+GitHub issues track workflow state. Run artifacts track durable outputs. Pull requests move artifacts into `main`.
 
 ## Core Model
 
-The repository uses GitHub issues in two ways:
+The workflow does not use `type:project` or `type:episode` labels as execution requirements.
 
-- `type:project`
-- `type:episode`
+Automated routing is controlled by `agent:*` labels:
 
-A `Project` issue tracks system-building work such as scaffolding, contracts, prompts, or integrations.
+- `agent:research`
+- `agent:writer`
+- `agent:producer`
 
-An `Episode` issue tracks one single podcast episode from intake through review. One episode should have one main issue. Research, writing, and production do not become separate GitHub issues.
+Workflow state is controlled by `status:*` labels:
 
-## Label Taxonomy
+- `status:ready`
+- `status:researching`
+- `status:writing`
+- `status:producing`
+- `status:review`
+- `status:done`
+- `status:blocked`
 
-### Type labels
+Claim locks are controlled by `claim:*` labels:
 
-#### `type:project`
+- `claim:research-agent`
+- `claim:writer-agent`
+- `claim:producer-agent`
 
-Use this label when the issue is about building or improving the system itself.
+Project, refactor, spike, documentation, prompt, and tooling issues must not receive episode `agent:*` labels unless the issue is specifically about implementing that agent workflow capability.
 
-Examples:
+## Label Rules
 
-- repo scaffold
-- contract schema design
-- PM agent orchestration work
-- Voicebox integration
-- prompt or config improvements
+- Active episode workflow issues must have exactly one `status:*` label.
+- Active episode workflow issues must have at most one active `agent:*` label.
+- Scheduled role agents must ignore issues without their matching `agent:*` label.
+- Scheduled role agents must ignore issues with `status:blocked`.
+- A `claim:*` label means that role has already claimed the issue.
+- PM is the only actor that advances an episode from one role label to the next role label.
+- PM must clean stale `status:*`, `agent:*`, and `claim:*` labels during controlled stage updates.
 
-Rules:
+## Status Labels
 
-- A `type:project` issue is not part of the daily episode pipeline
-- The PM agent should not automatically process `type:project` issues
-- A `type:project` issue may have no status label
-
-#### `type:episode`
-
-Use this label when the issue represents one daily podcast episode.
-
-Examples:
-
-- `Episode: August 19, 2026 - A Museum Opens`
-- `Episode: August 20, 2026 - The First Radio Broadcast`
-
-Rules:
-
-- One `type:episode` issue represents one episode
-- The PM agent may create or pick up a `type:episode` issue
-- A `type:episode` issue should have exactly one `status:*` label at a time
-
-### Status labels
-
-Status labels are primarily for `type:episode` issues.
-
-#### `status:ready`
+### `status:ready`
 
 Meaning:
 
-- the episode has enough metadata to begin
-- the PM agent can start execution
+- the issue has enough metadata for the next owner to begin
+- for a new episode issue, the next owner is `research-agent`
 
 Used when:
 
-- a new episode issue is created from a date
-- an existing episode issue is waiting to be processed
+- PM creates a dated episode issue
+- PM or a human unblocks an issue and makes it ready again
 
-#### `status:researching`
+### `status:researching`
 
 Meaning:
 
-- the PM agent has started the episode
 - the research stage is active
+- research artifacts have not yet been accepted by PM on `main`
 
 Used when:
 
-- the episode request has been resolved
-- the PM agent has dispatched or is dispatching work to the research agent
+- `research-agent` has claimed or is working on the issue
+- PM needs to show that research is the current stage
 
-#### `status:writing`
+### `status:writing`
 
 Meaning:
 
-- research is complete
-- the writer stage is active
+- research artifacts have been accepted
+- writer work is ready or active
 
 Used when:
 
-- the research dossier has been accepted
-- the PM agent has dispatched or is dispatching work to the writer agent
+- PM has validated merged research artifacts
+- PM has routed the issue to `agent:writer`
 
-#### `status:producing`
+### `status:producing`
 
 Meaning:
 
-- transcript generation is complete
-- audio rendering is active
+- writer artifacts have been accepted
+- producer work is ready or active
 
 Used when:
 
-- the transcript has been accepted
-- the PM agent has dispatched or is dispatching work to the producer agent
+- PM has validated merged writer artifacts
+- PM has routed the issue to `agent:producer`
 
-#### `status:review`
+### `status:review`
 
 Meaning:
 
-- the full automated pipeline has completed
+- production artifacts have been accepted
 - the episode is waiting for human review
 
 Used when:
 
-- research artifacts exist
-- transcript artifacts exist
-- audio artifacts exist
+- PM has validated production render metadata
+- PM has validated that `audio/final.mp3` is real audio/mpeg
 
-#### `status:done`
+### `status:done`
 
 Meaning:
 
 - the episode has passed human review
-- no further work is required for this issue
+- no further work is required
 
-#### `status:blocked`
+### `status:blocked`
 
 Meaning:
 
-- the episode cannot continue automatically
+- the issue cannot continue automatically
 
 Common reasons:
 
 - missing metadata
+- unclear requirements
 - weak or unsafe research result
 - transcript quality failure
 - Voicebox or producer failure
 
-When this label is used, the PM agent should leave a short explanation in the issue or run artifacts.
+When this label is used, the responsible agent or PM must leave an issue comment with the failed gate, missing information or artifact, and next required action.
 
-## Label Rules
+## Episode Defaults
 
-- Every issue should have exactly one `type:*` label
-- A `type:episode` issue should have at most one `status:*` label
-- A `type:project` issue does not need a `status:*` label
-- The PM agent should only auto-process `type:episode` issues
-
-## Project Defaults
-
-Project defaults are the repository-level rules that the PM agent should automatically apply when creating a new `type:episode` issue.
-
-This means the PM agent does not need a full manual brief for every episode. In the default case, a date alone is enough to start.
-
-### Required input
-
-Minimum required input for a default episode:
-
-- `date`
-
-Example:
-
-```yaml
-date: 2026-08-19
-```
-
-### Optional overrides
-
-Overrides are optional. They are only needed when the user or Studio Chef wants to influence the episode.
-
-Examples:
-
-```yaml
-date: 2026-08-19
-preferred_angle: person
-avoid_topics:
-  - war
-tone_note: gentler bedtime energy
-```
-
-### Default fields the PM agent should fill automatically
-
-When only a date is provided, the PM agent should populate at least:
+When only a date is provided, PM should populate at least:
 
 - `date`
 - `episode_slug`
@@ -195,9 +144,7 @@ When only a date is provided, the PM agent should populate at least:
 - `entity_type:` blank until research decides
 - `output_run_path:` blank until the run directory is created
 
-### Default project rules the PM agent should assume
-
-These rules come from the project spec and should be treated as defaults unless explicitly overridden:
+Default project rules:
 
 - format is `single-story deep dive`
 - target duration is `5-8 minutes`
@@ -212,8 +159,6 @@ These rules come from the project spec and should be treated as defaults unless 
 - voice cloning is disabled in v1
 
 ## Episode Issue Template Shape
-
-An episode issue should be lightweight. The issue is a control record, not the final artifact store.
 
 Recommended title:
 
@@ -254,116 +199,140 @@ Recommended body:
 
 Recommended labels:
 
-- `type:episode`
 - `status:ready`
+- `agent:research`
 
 ## Ownership Model
 
-### Who creates a `type:episode` issue
+### PM Agent
 
-Preferred path:
+PM owns intake and gates:
 
-- the PM agent creates the issue after receiving a date
+- creates episode issues
+- writes default metadata and required tasks
+- creates or validates run metadata when applicable
+- validates merged artifacts on `main`
+- updates issue context fields
+- advances `status:*` and `agent:*` labels after successful gates
+- blocks issues with clear failure comments when gates fail
 
-Allowed alternate path:
+PM must not run research, writer, or producer as part of the normal episode workflow.
 
-- a human creates the issue manually
-- the PM agent later picks it up
+### Research-Agent
 
-### Who processes each stage
+Research-agent owns research work:
 
-- `PM agent`
-  - creates or picks up the issue
-  - resolves metadata
-  - creates the run directory
-  - defines the required task checklist on newly created episode issues
-  - updates issue context when new workflow state is known
-  - updates labels and state
-  - dispatches the next stage
+- picks issues with `agent:research`
+- claims with `claim:research-agent`
+- creates a branch and worktree
+- writes research artifacts
+- opens a PR
+- comments on the issue with PR URL and artifact manifest
 
-- `research-agent`
-  - receives the episode request from the PM agent
-  - returns a research dossier
+Research-agent must not add `agent:writer` or advance the stage.
 
-- `writer-agent`
-  - receives the research dossier from the PM agent
-  - returns transcript artifacts
+### Writer-Agent
 
-- `producer-agent`
-  - receives the transcript from the PM agent
-  - returns audio artifacts and render metadata
+Writer-agent owns script writing:
 
-- `human reviewer`
-  - reviews the final result at `status:review`
-  - decides whether to move to `status:done` or reroute work
+- picks issues with `agent:writer`
+- claims with `claim:writer-agent`
+- reads research artifacts from `main`
+- writes transcript artifacts
+- opens a PR
+- comments on the issue with PR URL, quality summary, and artifact manifest
+
+Writer-agent must not add `agent:producer` or advance the stage.
+
+### Producer-Agent
+
+Producer-agent owns audio production:
+
+- picks issues with `agent:producer`
+- claims with `claim:producer-agent`
+- reads writer artifacts from `main`
+- renders audio artifacts
+- opens a PR
+- comments on the issue with PR URL and artifact manifest
+
+Producer-agent must not move the issue to `status:review`.
+
+### Human Reviewer
+
+The human reviewer reviews the final result at `status:review` and decides whether to move to `status:done` or reroute work.
 
 ## Status Transition Workflow
 
 ### Default happy path
 
-1. Input arrives with a date such as `2026-08-19`
-2. PM agent creates a `type:episode` issue
-3. PM agent applies project defaults and writes the required task checklist
-4. Issue receives `status:ready`
-5. PM agent picks up the ready issue
-6. PM agent resolves the episode request from the issue body
-7. PM agent creates a run directory and `episode-request.json`
-8. PM agent updates issue context, including `current_stage` and `output_run_path`
-9. Issue moves to `status:researching`
-10. PM agent dispatches the research agent
-11. Research dossier is saved
-12. Reference artifacts are saved under `references/`
-13. PM agent packages `research-dossier.json`, `references/research-references.json`, and `references/README.md` onto the GitHub issue
-14. Issue moves to `status:writing`
-15. PM agent dispatches the writer agent
-16. Transcript artifacts are saved
-17. Issue moves to `status:producing`
-18. PM agent dispatches the producer agent
-19. Audio artifacts are saved
-20. Issue moves to `status:review`
-21. A human reviews the output
-22. If approved, the issue moves to `status:done`
+1. Input arrives with a date such as `2026-08-19`.
+2. PM creates one GitHub issue.
+3. PM applies episode defaults and required tasks.
+4. PM applies `status:ready` and `agent:research`.
+5. Research-agent scheduled pickup claims the issue.
+6. Research-agent writes research artifacts on a branch.
+7. Research-agent opens a PR and comments on the issue.
+8. After the research PR is merged, PM validates research artifacts on `main`.
+9. PM sets `status:writing` and `agent:writer`.
+10. Writer-agent scheduled pickup claims the issue.
+11. Writer-agent writes transcript artifacts on a branch.
+12. Writer-agent opens a PR and comments on the issue.
+13. After the writer PR is merged, PM validates transcript artifacts on `main`.
+14. PM sets `status:producing` and `agent:producer`.
+15. Producer-agent scheduled pickup claims the issue.
+16. Producer-agent writes audio artifacts on a branch.
+17. Producer-agent opens a PR and comments on the issue.
+18. After the producer PR is merged, PM validates audio artifacts on `main`.
+19. PM sets `status:review` and removes active `agent:*`.
+20. A human reviews the output.
+21. If approved, the issue moves to `status:done`.
 
 ### Blocked path
 
 If any stage fails:
 
-1. PM agent preserves the latest valid artifact
-2. PM agent updates the issue to `status:blocked`
-3. PM agent records a short failure summary
-4. A human decides whether to retry, revise inputs, or close the issue
+1. The responsible actor preserves the latest valid artifact when one exists.
+2. The issue receives or keeps `status:blocked`.
+3. The responsible actor records a failure summary in an issue comment.
+4. If the blocker is missing implementation detail, create a dependency issue and link it from the blocked issue.
+5. PM or a human decides whether to retry, revise inputs, or close the issue.
 
 ## Artifact Handoff Model
 
 The PM agent does not assign work by creating sub-issues for research, writing, or producing.
 
-Instead, it assigns work through artifacts and stage transitions:
+It assigns work through labels and merged artifacts:
 
-- `status:ready`
-  - PM agent creates `episode-request.json`
-- `status:researching`
-  - research agent consumes `episode-request.json`
-  - research agent produces `research-dossier.json`
-  - research agent produces `references/research-references.json`
-  - research agent produces `references/README.md`
-  - PM agent packages those three files onto the GitHub issue before any later status update
-- `status:writing`
-  - writer agent consumes `research-dossier.json`
-  - writer agent produces `transcript.md` and `transcript.json`
-- `status:producing`
-  - producer agent consumes `transcript.json`
-  - producer agent produces audio output and render metadata
+- `status:ready` + `agent:research`
+  - research-agent consumes episode metadata
+  - research-agent produces `research-dossier.json`
+  - research-agent produces `references/research-references.json`
+  - research-agent produces `references/README.md`
+  - research-agent opens a PR
+- `status:writing` + `agent:writer`
+  - writer-agent consumes merged research artifacts
+  - writer-agent produces `transcript.md`
+  - writer-agent produces `transcript.json`
+  - writer-agent produces `transcript-quality-report.json`
+  - writer-agent opens a PR
+- `status:producing` + `agent:producer`
+  - producer-agent consumes merged writer artifacts
+  - producer-agent produces `audio/final.mp3`
+  - producer-agent produces `audio/render-metadata.json`
+  - producer-agent produces `audio/sfx-manifest.json`
+  - producer-agent opens a PR
 
-This keeps one GitHub issue as the episode control record while run artifacts live on disk.
+Downstream work must not depend on unmerged branch artifacts or in-memory objects from PM.
 
 ## Practical Expectations
 
-Once the foundation project is complete, the normal expectation for daily operation should be:
+Normal daily operation:
 
 - a date is provided
-- the PM agent creates one `type:episode` issue
-- the PM agent fills project defaults automatically
-- the PM agent moves the issue from `status:ready` to `status:review`
-- a human performs the final decision
+- PM creates one episode issue with `status:ready` and `agent:research`
+- scheduled role agents work only when their `agent:*` label appears
+- each role agent opens a PR for its artifacts
+- PM advances labels only after merged artifacts pass gates
+- a human performs the final review decision
 
-In other words, the episode workflow should not require a custom detailed brief every day. The project-level defaults are the standing brief.
+This keeps the issue as the control record while artifacts live in versioned run folders.

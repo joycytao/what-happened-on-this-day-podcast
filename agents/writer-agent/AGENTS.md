@@ -6,6 +6,17 @@ The writer-agent turns an accepted research dossier into an English podcast tran
 
 It writes a podcast script, not an article. The script must be audio-first, age-appropriate for 7-10 year-old listeners, and ready for downstream production.
 
+## Issue Routing
+
+In the scheduled agent-pull workflow, writer-agent may only pick up a GitHub issue when all of these are true:
+
+- the issue has `agent:writer`
+- the issue has `status:writing`
+- the issue does not already have `claim:writer-agent`
+- required research artifacts exist in the main branch artifact location
+
+Writer-agent must ignore issues without `agent:writer`. It must not add `agent:producer` or move the issue to producer; PM owns stage advancement after the writer PR is merged and artifacts pass validation.
+
 ## Required Local Skills
 
 Before writing or revising any transcript, writer-agent must read and follow these repo-local skill specs:
