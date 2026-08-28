@@ -166,7 +166,7 @@ describe("pm agent cli", () => {
     expect(createdIssueDrafts).toHaveLength(1);
     expect(createdIssueDrafts[0]).toMatchObject({
       title: "Episode: August 24, 2026 - daily episode",
-      labels: ["type:episode", "status:ready"]
+      labels: ["status:ready", "agent:research"]
     });
     expect(result).toMatchObject({
       issueNumber: 24,
@@ -181,9 +181,9 @@ describe("pm agent cli", () => {
     });
   });
 
-  it("picks up a ready episode issue and passes issue context downstream", async () => {
+  it("picks up a ready episode issue and initializes research without downstream execution", async () => {
     const logs: Array<{ message: string; meta?: Record<string, unknown> }> = [];
-    const pickedUpIssues: Array<{ issueNumber: number; title: string }> = [];
+    const initializedIssues: Array<{ issueNumber: number; title: string }> = [];
 
     const result = await runPmAgentCli(["node", "pm-agent", "pickup-episode", "--issue-number", "24"], {
       repoRoot: "/tmp/podcast-repo",
@@ -194,25 +194,25 @@ describe("pm agent cli", () => {
           issueNumber: 23,
           title: "Episode: August 23, 2026 - daily episode",
           body: "date: 2026-08-23\nepisode_slug: 2026-08-23-daily-episode",
-          labels: ["type:episode", "status:review"],
+          labels: ["status:review"],
           state: "OPEN" as const
         },
         {
           issueNumber: 24,
           title: "Episode: August 24, 2026 - daily episode",
           body: "date: 2026-08-24\nepisode_slug: 2026-08-24-daily-episode",
-          labels: ["type:episode", "status:ready"],
+          labels: ["status:ready", "agent:research"],
           state: "OPEN" as const
         }
       ],
       runEpisodePipeline: async ({ issue }) => {
         if (!issue) throw new Error("Expected pickup to pass an issue.");
-        pickedUpIssues.push({ issueNumber: issue.issueNumber, title: issue.title });
+        initializedIssues.push({ issueNumber: issue.issueNumber, title: issue.title });
 
         return {
           issueNumber: issue.issueNumber,
           runDir: "/tmp/podcast-repo/runs/2026-08-24-daily-episode",
-          finalStage: "review" as const
+          finalStage: "researching" as const
         };
       },
       logger: {
@@ -224,7 +224,7 @@ describe("pm agent cli", () => {
       }
     });
 
-    expect(pickedUpIssues).toEqual([
+    expect(initializedIssues).toEqual([
       {
         issueNumber: 24,
         title: "Episode: August 24, 2026 - daily episode"
@@ -232,15 +232,38 @@ describe("pm agent cli", () => {
     ]);
     expect(result).toMatchObject({
       issueNumber: 24,
-      finalStage: "review"
+      finalStage: "researching"
     });
     expect(logs[0]).toMatchObject({
       message: "Picked up episode issue",
       meta: {
         issueNumber: 24,
-        finalStage: "review"
+        finalStage: "researching"
       }
     });
+  });
+
+  it("accepts PM gatekeeper command names", async () => {
+    await expect(
+      runPmAgentCli(["node", "pm-agent", "audit-episode"], {
+        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+        resolveRepo: async () => "joycytao/what-happened-on-this-day-podcast"
+      })
+    ).rejects.toThrow("The audit-episode command requires --issue-number.");
+
+    await expect(
+      runPmAgentCli(["node", "pm-agent", "advance-after-merge"], {
+        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+        resolveRepo: async () => "joycytao/what-happened-on-this-day-podcast"
+      })
+    ).rejects.toThrow("The advance-after-merge command requires --issue-number.");
+
+    await expect(
+      runPmAgentCli(["node", "pm-agent", "block-episode"], {
+        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+        resolveRepo: async () => "joycytao/what-happened-on-this-day-podcast"
+      })
+    ).rejects.toThrow("The block-episode command requires --issue-number.");
   });
 
   it("triages a new feature request before creating work", async () => {
@@ -269,13 +292,13 @@ describe("pm agent cli", () => {
 
     expect(result).toMatchObject({
       action: "create_spike",
-      issueType: "type:project"
+      workflow: "system"
     });
     expect(logs[0]).toMatchObject({
       message: "Triaged feature request",
       meta: {
         action: "create_spike",
-        issueType: "type:project"
+        workflow: "system"
       }
     });
   });

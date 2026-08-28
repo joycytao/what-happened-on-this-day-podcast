@@ -69,6 +69,16 @@ Writer-agent must write a podcast script, not an article. It must strictly follo
 
 When work is ready, scheduled role agents select issues by matching `agent:*` labels. PM does not route work by `type:*` labels.
 
+PM can use these commands:
+
+```bash
+npm run pm-agent -- create-episode --date 2026-08-24 --working-title "daily episode"
+npm run pm-agent -- pickup-episode --issue-number 24
+npm run pm-agent -- audit-episode --issue-number 24
+npm run pm-agent -- advance-after-merge --issue-number 24
+npm run pm-agent -- block-episode --issue-number 24 --reason "missing research artifacts"
+```
+
 PM gatekeeping then:
 
 - resolves the episode request from the issue body

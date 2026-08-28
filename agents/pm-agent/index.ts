@@ -1,18 +1,20 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { runResearchAgent } from "../research-agent";
-import { evaluateTranscriptQuality, runWriterAgent } from "../writer-agent";
-import { runProducerAgent } from "../producer-agent";
+import { evaluateTranscriptQuality } from "../writer-agent";
 import {
   buildEpisodeIssueDraft,
+  assertResearchPackageArtifacts,
+  commentOnEpisodeIssue,
   createEpisodeIssue,
   createEpisodeIssueFromDate,
+  loadEpisodeIssueFromGitHub,
   loadReadyEpisodeIssues,
+  parseEpisodeIssueFields,
   resolveEpisodeRequest,
   selectEpisodeIssueForPickup,
   updateEpisodeIssueContextOnGitHub,
-  uploadResearchPackageToGitHubIssue,
+  updateEpisodeIssueStageOnGitHub,
   type EpisodeIssue,
   type EpisodeIssueContextUpdates,
   type EpisodeIssueDraft
@@ -34,9 +36,10 @@ import { transcriptSchema, type Transcript } from "../../src/contracts";
 
 export { resolveEpisodeRequest, createRunManifest };
 
-type ProducerResult = Awaited<ReturnType<typeof runProducerAgent>>;
-type WriterAgent = (dossier: Awaited<ReturnType<typeof runResearchAgent>>, options?: { runDir?: string }) => Promise<Transcript>;
-type ProducerAgent = typeof runProducerAgent;
+type ProducerResult = {
+  audioPath: string;
+  metadataPath: string;
+};
 
 export async function assertWriterTranscriptArtifact(runDir: string) {
   const transcriptPath = path.join(runDir, "transcript.json");
@@ -130,9 +133,6 @@ export async function runEpisodePipeline(input: {
 }, dependencies: {
   createEpisodeIssue?: (draft: EpisodeIssueDraft) => Promise<EpisodeIssue>;
   updateEpisodeIssueContext?: (issue: EpisodeIssue, updates: EpisodeIssueContextUpdates) => Promise<EpisodeIssue>;
-  uploadResearchPackage?: (input: { issue: EpisodeIssue; runDir: string }) => Promise<void>;
-  runWriterAgent?: WriterAgent;
-  runProducerAgent?: ProducerAgent;
   repo?: string;
 } = {}) {
   const issue =
@@ -145,34 +145,15 @@ export async function runEpisodePipeline(input: {
   const { runDir } = await createRunManifest(request);
   const outputRunPath = path.relative(process.cwd(), runDir);
   const updateEpisodeIssueContext = dependencies.updateEpisodeIssueContext ?? (async (nextIssue: EpisodeIssue) => nextIssue);
-  let currentIssue = await updateEpisodeIssueContext(issue, {
+  const currentIssue = await updateEpisodeIssueContext(issue, {
     currentStage: "researching",
-    outputRunPath
-  });
-  const dossier = await runResearchAgent({ ...request, currentStage: "researching" }, { runDir });
-  await (dependencies.uploadResearchPackage ??
-    ((input) =>
-      dependencies.repo
-        ? uploadResearchPackageToGitHubIssue({ ...input, repo: dependencies.repo }).then(() => undefined)
-        : Promise.resolve()))({ issue: currentIssue, runDir });
-  currentIssue = await updateEpisodeIssueContext(currentIssue, {
-    currentStage: "writing",
-    outputRunPath
-  });
-  const transcript = await (dependencies.runWriterAgent ?? runWriterAgent)(dossier, { runDir });
-  const transcriptArtifact = await assertWriterTranscriptArtifact(runDir);
-  await assertWriterTranscriptQuality(runDir, transcriptArtifact);
-  const producerResult = await (dependencies.runProducerAgent ?? runProducerAgent)(transcriptArtifact, `${runDir}/audio`);
-  await assertReviewableEpisodeAudio(producerResult);
-  currentIssue = await updateEpisodeIssueContext(currentIssue, {
-    currentStage: "review",
     outputRunPath
   });
 
   return {
     issueNumber: currentIssue.issueNumber,
     runDir,
-    finalStage: "review" as const
+    finalStage: "researching" as const
   };
 }
 
@@ -215,6 +196,10 @@ export async function runPmAgentCli(
     createEpisodeIssueFromDate?: typeof createEpisodeIssueFromDate;
     updateEpisodeIssueContext?: (issue: EpisodeIssue, updates: EpisodeIssueContextUpdates) => Promise<EpisodeIssue>;
     runEpisodePipeline?: typeof runEpisodePipeline;
+    loadEpisodeIssue?: (issueNumber: number) => Promise<EpisodeIssue>;
+    auditEpisode?: typeof auditEpisode;
+    advanceEpisodeAfterMerge?: typeof advanceEpisodeAfterMerge;
+    blockEpisode?: typeof blockEpisode;
     loadFeatureIntakeContext?: () => Promise<Omit<FeatureIntakeInput, "request">>;
   } = {}
 ) {
@@ -224,6 +209,9 @@ export async function runPmAgentCli(
     "create-episode",
     "create-episode-from-date",
     "pickup-episode",
+    "audit-episode",
+    "advance-after-merge",
+    "block-episode",
     "pickup-project-issue",
     "complete-project-issue",
     "triage-feature"
@@ -258,10 +246,71 @@ export async function runPmAgentCli(
     logger.info("Triaged feature request", {
       repo,
       action: decision.action,
-      issueType: "issueType" in decision ? decision.issueType : undefined
+      workflow: "workflow" in decision ? decision.workflow : undefined
     });
 
     return decision;
+  }
+
+  if (["audit-episode", "advance-after-merge", "block-episode"].includes(command)) {
+    if (typeof issueNumber !== "number" || Number.isNaN(issueNumber)) {
+      throw new Error(`The ${command} command requires --issue-number.`);
+    }
+
+    const loadIssue =
+      dependencies.loadEpisodeIssue ??
+      ((nextIssueNumber: number) => loadEpisodeIssueFromGitHub({ repo, issueNumber: nextIssueNumber }));
+
+    if (command === "audit-episode") {
+      const result = await (dependencies.auditEpisode ?? auditEpisode)({
+        repoRoot,
+        issue: await loadIssue(issueNumber)
+      });
+
+      logger.info("Audited episode issue", {
+        repo,
+        issueNumber,
+        currentStage: result.currentStage,
+        activeAgentLabel: result.activeAgentLabel
+      });
+
+      return result;
+    }
+
+    if (command === "advance-after-merge") {
+      const result = await (dependencies.advanceEpisodeAfterMerge ?? advanceEpisodeAfterMerge)({
+        repo,
+        repoRoot,
+        issue: await loadIssue(issueNumber)
+      });
+
+      logger.info("Advanced episode issue after merge", {
+        repo,
+        issueNumber,
+        currentStage: result.currentStage,
+        activeAgentLabel: result.activeAgentLabel
+      });
+
+      return result;
+    }
+
+    if (typeof options.reason !== "string") {
+      throw new Error("The block-episode command requires --reason.");
+    }
+
+    const result = await (dependencies.blockEpisode ?? blockEpisode)({
+      repo,
+      issue: await loadIssue(issueNumber),
+      reason: options.reason
+    });
+
+    logger.info("Blocked episode issue", {
+      repo,
+      issueNumber,
+      reason: options.reason
+    });
+
+    return result;
   }
 
   if (command === "create-episode-from-date") {
@@ -380,6 +429,120 @@ export async function runPmAgentCli(
   });
 
   return result;
+}
+
+export async function auditEpisode(input: { repoRoot: string; issue: EpisodeIssue }) {
+  const fields = parseEpisodeIssueFields(input.issue.body);
+  const request = resolveEpisodeRequest(input.issue);
+  const outputRunPath = fields.output_run_path || path.join("runs", request.episodeSlug);
+
+  return {
+    issueNumber: input.issue.issueNumber,
+    title: input.issue.title,
+    currentStage: request.currentStage,
+    activeAgentLabel: activeAgentLabel(input.issue),
+    outputRunPath,
+    runDir: path.join(input.repoRoot, outputRunPath)
+  };
+}
+
+export async function advanceEpisodeAfterMerge(input: {
+  repo: string;
+  repoRoot: string;
+  issue: EpisodeIssue;
+}) {
+  const audit = await auditEpisode({ repoRoot: input.repoRoot, issue: input.issue });
+
+  if (audit.activeAgentLabel === "agent:research") {
+    await assertResearchPackageArtifacts(audit.runDir);
+    const issue = await updateEpisodeIssueStageOnGitHub(
+      input.issue,
+      {
+        currentStage: "writing",
+        outputRunPath: audit.outputRunPath,
+        nextAgentLabel: "agent:writer"
+      },
+      { repo: input.repo }
+    );
+
+    return {
+      issueNumber: issue.issueNumber,
+      currentStage: "writing" as const,
+      activeAgentLabel: "agent:writer" as const
+    };
+  }
+
+  if (audit.activeAgentLabel === "agent:writer") {
+    const transcript = await assertWriterTranscriptArtifact(audit.runDir);
+    await assertWriterTranscriptQuality(audit.runDir, transcript);
+    const issue = await updateEpisodeIssueStageOnGitHub(
+      input.issue,
+      {
+        currentStage: "producing",
+        outputRunPath: audit.outputRunPath,
+        nextAgentLabel: "agent:producer"
+      },
+      { repo: input.repo }
+    );
+
+    return {
+      issueNumber: issue.issueNumber,
+      currentStage: "producing" as const,
+      activeAgentLabel: "agent:producer" as const
+    };
+  }
+
+  if (audit.activeAgentLabel === "agent:producer") {
+    await assertReviewableEpisodeAudio({
+      audioPath: path.join(audit.runDir, "audio", "final.mp3"),
+      metadataPath: path.join(audit.runDir, "audio", "render-metadata.json")
+    });
+    const issue = await updateEpisodeIssueStageOnGitHub(
+      input.issue,
+      {
+        currentStage: "review",
+        outputRunPath: audit.outputRunPath
+      },
+      { repo: input.repo }
+    );
+
+    return {
+      issueNumber: issue.issueNumber,
+      currentStage: "review" as const,
+      activeAgentLabel: undefined
+    };
+  }
+
+  throw new Error(`Issue #${input.issue.issueNumber} has no active episode agent label to advance.`);
+}
+
+export async function blockEpisode(input: {
+  repo: string;
+  issue: EpisodeIssue;
+  reason: string;
+}) {
+  const issue = await updateEpisodeIssueStageOnGitHub(
+    input.issue,
+    {
+      currentStage: "blocked"
+    },
+    { repo: input.repo }
+  );
+  await commentOnEpisodeIssue({
+    repo: input.repo,
+    issueNumber: input.issue.issueNumber,
+    body: `## PM blocked episode\n\nReason: ${input.reason}`
+  });
+
+  return {
+    issueNumber: issue.issueNumber,
+    currentStage: "blocked" as const,
+    reason: input.reason
+  };
+}
+
+function activeAgentLabel(issue: EpisodeIssue) {
+  return issue.labels.find((label) => /^agent:(research|writer|producer)$/i.test(label));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {

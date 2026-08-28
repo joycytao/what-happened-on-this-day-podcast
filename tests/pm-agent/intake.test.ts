@@ -48,7 +48,7 @@ describe("pm agent intake", () => {
         "- [ ] Produce audio artifact and render metadata",
         "- [ ] Prepare episode for human review"
       ].join("\n"),
-      labels: ["type:episode", "status:ready"]
+      labels: ["status:ready", "agent:research"]
     });
   });
 
@@ -133,7 +133,7 @@ describe("pm agent intake", () => {
           "duration_max_min: 8",
           "current_stage: ready"
         ].join("\n"),
-        labels: ["type:episode", "status:ready"]
+        labels: ["status:ready", "agent:research"]
       })
     ).toMatchObject({
       date: "2026-08-18",

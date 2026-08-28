@@ -42,7 +42,7 @@ describe("pm agent feature intake", () => {
       })
     ).toMatchObject({
       action: "create_ticket",
-      issueType: "type:episode"
+      workflow: "episode"
     });
   });
 
@@ -56,7 +56,7 @@ describe("pm agent feature intake", () => {
       })
     ).toMatchObject({
       action: "create_spike",
-      issueType: "type:project"
+      workflow: "system"
     });
   });
 });
