@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { runResearchAgent } from "../research-agent";
@@ -31,6 +32,35 @@ import { parseCliArgs } from "../../src/lib/cli";
 import { createLogger } from "../../src/lib/logger";
 
 export { resolveEpisodeRequest, createRunManifest };
+
+type ProducerResult = Awaited<ReturnType<typeof runProducerAgent>>;
+
+export async function assertReviewableEpisodeAudio(result: ProducerResult) {
+  const metadata = JSON.parse(await fs.readFile(result.metadataPath, "utf8")) as {
+    voicebox?: {
+      status?: string;
+      mode?: string;
+    };
+  };
+  const audioHeader = await readAudioHeader(result.audioPath);
+  const failures: string[] = [];
+
+  if (metadata.voicebox?.mode !== "production") {
+    failures.push(`voicebox.mode is ${metadata.voicebox?.mode ?? "missing"}`);
+  }
+
+  if (metadata.voicebox?.status !== "succeeded") {
+    failures.push(`voicebox.status is ${metadata.voicebox?.status ?? "missing"}`);
+  }
+
+  if (!isMp3Header(audioHeader)) {
+    failures.push("audio/final.mp3 is not audio/mpeg");
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`Episode audio is not reviewable: ${failures.join("; ")}`);
+  }
+}
 
 export async function runEpisodePipeline(input: {
   issueNumber?: number;
@@ -67,7 +97,8 @@ export async function runEpisodePipeline(input: {
     outputRunPath
   });
   const transcript = await runWriterAgent(dossier);
-  await runProducerAgent(transcript, `${runDir}/audio`);
+  const producerResult = await runProducerAgent(transcript, `${runDir}/audio`);
+  await assertReviewableEpisodeAudio(producerResult);
   currentIssue = await updateEpisodeIssueContext(currentIssue, {
     currentStage: "review",
     outputRunPath
@@ -78,6 +109,26 @@ export async function runEpisodePipeline(input: {
     runDir,
     finalStage: "review" as const
   };
+}
+
+async function readAudioHeader(audioPath: string) {
+  const file = await fs.open(audioPath, "r");
+
+  try {
+    const buffer = Buffer.alloc(10);
+    const { bytesRead } = await file.read(buffer, 0, buffer.length, 0);
+
+    return buffer.subarray(0, bytesRead);
+  } finally {
+    await file.close();
+  }
+}
+
+function isMp3Header(header: Uint8Array) {
+  const hasId3Tag = header[0] === 0x49 && header[1] === 0x44 && header[2] === 0x33;
+  const hasMpegFrameSync = header[0] === 0xff && (header[1] & 0xe0) === 0xe0;
+
+  return hasId3Tag || hasMpegFrameSync;
 }
 
 export async function runPmAgentCli(

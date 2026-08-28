@@ -1,15 +1,11 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-import fs from "node:fs/promises";
-import path from "node:path";
 import { runEpisodePipeline } from "../../agents/pm-agent";
 
 type EpisodeIssueDraft = { title: string; body: string; labels: string[] };
 
 describe("pm dry run", () => {
-  it("runs the full pm dry run to review", async () => {
-    const result = await runEpisodePipeline(
+  it("blocks dry-run audio before review", async () => {
+    await expect(runEpisodePipeline(
       {
         brief: {
           date: "2026-08-19",
@@ -24,22 +20,15 @@ describe("pm dry run", () => {
           labels: draft.labels
         })
       }
-    );
-
-    await fs.rm(path.join(result.runDir, "audio", "sfx-manifest.json"), { force: true });
-
-    expect(result.runDir).toContain("runs/");
-    expect(result.finalStage).toBe("review");
-    await expect(fs.access(path.join(result.runDir, "research-dossier.json"))).resolves.toBeUndefined();
-    await expect(fs.access(path.join(result.runDir, "references", "research-references.json"))).resolves.toBeUndefined();
+    )).rejects.toThrow("Episode audio is not reviewable");
   });
 
-  it("creates an episode issue before passing the request downstream", async () => {
+  it("creates an episode issue before passing the request downstream and does not review dry-run audio", async () => {
     const createdIssueDrafts: Array<{ title: string; body: string; labels: string[] }> = [];
     const contextUpdates: Array<{ currentStage?: string; outputRunPath?: string }> = [];
     const uploadedResearchPackages: Array<{ issueNumber: number; runDir: string }> = [];
 
-    const result = await runEpisodePipeline(
+    await expect(runEpisodePipeline(
       {
         brief: {
           date: "2026-08-24",
@@ -65,15 +54,12 @@ describe("pm dry run", () => {
           uploadedResearchPackages.push({ issueNumber: issue.issueNumber, runDir });
         }
       }
-    );
+    )).rejects.toThrow("Episode audio is not reviewable");
 
     expect(createdIssueDrafts[0]).toMatchObject({
       title: "Episode: August 24, 2026 - daily episode",
       labels: ["type:episode", "status:ready"]
     });
-    expect(result.runDir).toContain("runs/2026-08-24-created-on-github");
-    expect(result.issueNumber).toBe(24);
-    expect(result.finalStage).toBe("review");
     expect(contextUpdates).toEqual([
       {
         currentStage: "researching",
@@ -82,16 +68,13 @@ describe("pm dry run", () => {
       {
         currentStage: "writing",
         outputRunPath: "runs/2026-08-24-created-on-github"
-      },
-      {
-        currentStage: "review",
-        outputRunPath: "runs/2026-08-24-created-on-github"
       }
     ]);
+    expect(contextUpdates.some((update) => update.currentStage === "review")).toBe(false);
     expect(uploadedResearchPackages).toEqual([
       {
         issueNumber: 24,
-        runDir: result.runDir
+        runDir: expect.stringContaining("runs/2026-08-24-created-on-github")
       }
     ]);
   });
