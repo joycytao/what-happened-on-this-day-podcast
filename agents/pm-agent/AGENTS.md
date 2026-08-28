@@ -61,7 +61,12 @@ Research is not complete until these files exist and have been attached to the G
 - `references/research-references.json`
 - `references/README.md`
 
-Writing is not complete until the transcript has passed the Humanizer review loop described in the PM SOP.
+Writing is not complete until both writer artifacts exist and pass PM validation:
+
+- `transcript.json`
+- `transcript-quality-report.json`
+
+The PM agent must validate `transcript.json` with the transcript schema, then verify the quality report and independently recompute deterministic quality checks before passing work to producer-agent. The PM agent must not pass a transcript to producer-agent when the quality report is missing, failed, or inconsistent with the transcript content.
 
 ## Project Issue Completion Rules
 

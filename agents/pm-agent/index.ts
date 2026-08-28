@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { runResearchAgent } from "../research-agent";
-import { runWriterAgent } from "../writer-agent";
+import { evaluateTranscriptQuality, runWriterAgent } from "../writer-agent";
 import { runProducerAgent } from "../producer-agent";
 import {
   buildEpisodeIssueDraft,
@@ -42,7 +42,7 @@ export async function assertWriterTranscriptArtifact(runDir: string) {
   const transcriptPath = path.join(runDir, "transcript.json");
 
   try {
-    transcriptSchema.parse(JSON.parse(await fs.readFile(transcriptPath, "utf8")));
+    return transcriptSchema.parse(JSON.parse(await fs.readFile(transcriptPath, "utf8")));
   } catch (error) {
     throw new Error(
       `Writer transcript artifact is incomplete: ${transcriptPath}${
@@ -50,8 +50,50 @@ export async function assertWriterTranscriptArtifact(runDir: string) {
       }`
     );
   }
+}
 
-  return transcriptPath;
+export async function assertWriterTranscriptQuality(runDir: string, transcript: Transcript) {
+  const reportPath = path.join(runDir, "transcript-quality-report.json");
+  const failures: string[] = [];
+
+  try {
+    const report = JSON.parse(await fs.readFile(reportPath, "utf8")) as {
+      status?: string;
+      checks?: Record<string, { status?: string }>;
+    };
+
+    if (report.status !== "pass") {
+      failures.push(`report.status is ${report.status ?? "missing"}`);
+    }
+
+    for (const [checkName, check] of Object.entries(report.checks ?? {})) {
+      if (check.status !== "pass") {
+        failures.push(`${checkName} is ${check.status ?? "missing"}`);
+      }
+    }
+  } catch (error) {
+    throw new Error(
+      `Writer transcript quality gate failed: ${reportPath}${
+        error instanceof Error ? ` (${error.message})` : ""
+      }`
+    );
+  }
+
+  const computedReport = evaluateTranscriptQuality(transcript);
+
+  if (computedReport.status !== "pass") {
+    failures.push(
+      ...Object.entries(computedReport.checks)
+        .filter(([, check]) => check.status !== "pass")
+        .map(([checkName, check]) => `${checkName} expected ${check.expected}, actual ${check.actual}`)
+    );
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`Writer transcript quality gate failed: ${failures.join("; ")}`);
+  }
+
+  return reportPath;
 }
 
 export async function assertReviewableEpisodeAudio(result: ProducerResult) {
@@ -118,8 +160,9 @@ export async function runEpisodePipeline(input: {
     outputRunPath
   });
   const transcript = await (dependencies.runWriterAgent ?? runWriterAgent)(dossier, { runDir });
-  await assertWriterTranscriptArtifact(runDir);
-  const producerResult = await (dependencies.runProducerAgent ?? runProducerAgent)(transcript, `${runDir}/audio`);
+  const transcriptArtifact = await assertWriterTranscriptArtifact(runDir);
+  await assertWriterTranscriptQuality(runDir, transcriptArtifact);
+  const producerResult = await (dependencies.runProducerAgent ?? runProducerAgent)(transcriptArtifact, `${runDir}/audio`);
   await assertReviewableEpisodeAudio(producerResult);
   currentIssue = await updateEpisodeIssueContext(currentIssue, {
     currentStage: "review",
