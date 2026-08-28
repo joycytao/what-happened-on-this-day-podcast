@@ -431,13 +431,15 @@ export function resolveEpisodeRequest(issue: EpisodeIssue) {
 }
 
 function replaceIssueField(body: string, field: string, value: string) {
-  const fieldPattern = new RegExp(`^- ${field}:.*$`, "m");
+  const fieldPattern = new RegExp(`^(-\\s+)?${field}:.*$`, "m");
+  const existingPrefix = body.match(fieldPattern)?.[1] ?? "";
 
   if (fieldPattern.test(body)) {
-    return body.replace(fieldPattern, `- ${field}: ${value}`);
+    return body.replace(fieldPattern, `${existingPrefix}${field}: ${value}`);
   }
 
-  return `${body.trimEnd()}\n- ${field}: ${value}\n`;
+  const inferredPrefix = /^-\s+\w+:/m.test(body) ? "- " : "";
+  return `${body.trimEnd()}\n${inferredPrefix}${field}: ${value}\n`;
 }
 
 function normalizeLabel(label: string) {
