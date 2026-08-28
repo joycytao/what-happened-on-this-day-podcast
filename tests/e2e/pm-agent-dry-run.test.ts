@@ -4,6 +4,46 @@ import { runEpisodePipeline } from "../../agents/pm-agent";
 type EpisodeIssueDraft = { title: string; body: string; labels: string[] };
 
 describe("pm dry run", () => {
+  it("blocks producer handoff when writer transcript artifact is missing", async () => {
+    let producerCallCount = 0;
+
+    await expect(runEpisodePipeline(
+      {
+        brief: {
+          date: "2026-08-20",
+          workingTitle: "Writer Artifact Gate"
+        }
+      },
+      {
+        createEpisodeIssue: async (draft: EpisodeIssueDraft) => ({
+          issueNumber: 20,
+          title: draft.title,
+          body: draft.body,
+          labels: draft.labels
+        }),
+        runWriterAgent: async () => ({
+          opening: "A test opening for the writer artifact gate.",
+          segments: [
+            {
+              heading: "A test segment",
+              body: "A test body for the writer artifact gate."
+            }
+          ],
+          closing: "A test closing for the writer artifact gate.",
+          estimatedDurationMin: 5,
+          ttsNotes: []
+        }),
+        runProducerAgent: async () => {
+          producerCallCount += 1;
+
+          throw new Error("Producer should not run without transcript.json.");
+        }
+      }
+    )).rejects.toThrow("Writer transcript artifact is incomplete");
+
+    expect(producerCallCount).toBe(0);
+  });
+
   it("blocks dry-run audio before review", async () => {
     await expect(runEpisodePipeline(
       {
