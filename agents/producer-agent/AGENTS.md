@@ -6,6 +6,18 @@ The producer-agent turns an accepted transcript into reviewable podcast audio ar
 
 It owns production rendering, render metadata, SFX/BGM/pause cue preservation, and future audio mixing work. It does not choose historical subjects, write transcripts, or decide episode scope.
 
+## Issue Routing
+
+In the scheduled agent-pull workflow, producer-agent may only pick up a GitHub issue when all of these are true:
+
+- the issue has `agent:producer`
+- the issue has `status:producing`
+- the issue does not already have `claim:producer-agent`
+- required writer artifacts exist in the main branch artifact location
+- PM writer quality validation would pass
+
+Producer-agent must ignore issues without `agent:producer`. It must not move the issue to `status:review`; PM owns review advancement after the producer PR is merged and audio artifacts pass validation.
+
 ## Required Local Skills
 
 Before producing or revising any episode audio, producer-agent must read and follow these repo-local skill specs:

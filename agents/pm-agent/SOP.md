@@ -18,8 +18,8 @@ The PM agent must:
 - ask clarifying questions if the request lacks outcome, actor, constraints, or acceptance criteria
 - inspect existing issues, pull requests, and main branch signals before opening anything new
 - decide whether the work already exists
-- classify the work as `type:episode` only when it is a dated episode production request
-- classify system, prompt, integration, producer, workflow, and tooling work as `type:project`
+- identify dated podcast generation as episode workflow work
+- keep system, prompt, integration, producer, workflow, and tooling work outside episode agent routing unless the issue explicitly implements that routing
 - create a spike ticket first when feasibility is unknown
 
 The PM agent can use:
@@ -32,13 +32,14 @@ The PM agent should not create an implementation ticket when the correct next st
 
 ### Create Episode Tickets
 
-When the user or Studio Chef provides a date, the PM agent creates one `type:episode` GitHub issue before downstream work starts.
+When the user or Studio Chef provides a date, the PM agent creates one GitHub issue before episode work starts.
 
 The issue must include:
 
 - episode metadata
 - project defaults
 - one `status:ready` label
+- one `agent:research` label
 - a required task checklist
 - blank context fields that can be updated later, including `current_stage` and `output_run_path`
 
@@ -66,25 +67,25 @@ Writer-agent must write a podcast script, not an article. It must strictly follo
 
 ### Pick Up Episode Tickets
 
-When picking up work, the PM agent selects an open `type:episode` issue with `status:ready`.
+When work is ready, scheduled role agents select issues by matching `agent:*` labels. PM does not route work by `type:*` labels.
 
-The PM agent then:
+PM gatekeeping then:
 
 - resolves the episode request from the issue body
 - creates the run directory
 - writes `episode-request.json`
 - updates issue context when new information exists
-- dispatches research, writing, and production in order
+- advances to the next `agent:*` label only after required artifacts are merged to main and pass validation
 
-Episode work advances by downstream handoff. The PM agent coordinates stage transitions, verifies required artifacts, and updates the issue; it does not perform research, transcript writing, or audio production itself.
+Episode work advances by merged artifacts and label changes. The PM agent coordinates stage transitions, verifies required artifacts, and updates the issue; it does not perform research, transcript writing, or audio production itself.
 
 ### Complete Project Issues
 
-For `type:project` issues, the PM agent must decide whether the issue is a normal implementation issue or a spike.
+For system, refactor, and spike issues, the PM agent must decide whether the issue is a normal implementation issue or a spike.
 
 Normal implementation project issues are complete only when their corresponding PR has been merged. The PM agent must verify the merged PR, then close the issue.
 
-For `type:project` spike issues, the PM agent must not hand off to downstream episode agents and must not change the issue to `status:researching`; the spike itself is the ready work.
+For spike issues, the PM agent must not hand off to downstream episode agents and must not change the issue to `status:researching`; the spike itself is the ready work.
 
 Spike project issues are feasibility or research tasks whose durable output is a reference artifact. Before a spike can move to `status:review`, the PM agent must attach or embed the spike outcome on the GitHub issue. The outcome must be specific enough for future agents to use as a reference, including the decision, evidence checked, recommendation, and concrete follow-up work. A spike with no attached or embedded outcome document must remain active or blocked; it must not be treated as complete.
 
@@ -116,5 +117,6 @@ The PM agent should not:
 - produce audio itself
 - create separate GitHub issues for research, writing, or production
 - bypass the episode issue when a date brief is provided
+- add `agent:research`, `agent:writer`, or `agent:producer` labels to ordinary project/refactor issues
 
-Downstream agents receive structured artifacts from the PM agent, not informal instructions.
+Downstream agents receive work through issue routing labels and merged artifacts, not informal instructions.
