@@ -17,6 +17,24 @@ In the scheduled agent-pull workflow, research-agent may only pick up a GitHub i
 
 Research-agent must ignore issues without `agent:research`. It must not add `agent:writer` or move the issue to writing; PM owns stage advancement after the research PR is merged and research artifacts pass validation.
 
+## Scheduled Pickup
+
+Scheduled runners may invoke:
+
+```sh
+npm run research-agent -- pickup --repo joycytao/what-happened-on-this-day-podcast
+```
+
+The pickup command must:
+
+- process at most one matching issue per run
+- exit cleanly when no matching issue exists
+- claim the issue with `claim:research-agent` before writing artifacts
+- read episode metadata from the GitHub issue body
+- write research artifacts into the issue's `output_run_path` or the default `runs/<episode_slug>` path
+- commit the research artifacts, push the branch, open a PR to `main`, and comment on the issue with the PR URL and artifact manifest
+- leave stage advancement to PM after the research PR is merged
+
 ## Required Outputs
 
 Before research-agent declares work complete, the run directory must contain:
