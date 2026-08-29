@@ -231,6 +231,12 @@ Research-agent owns research work:
 
 Research-agent must not add `agent:writer` or advance the stage.
 
+Scheduled command:
+
+```sh
+npm run research-agent -- pickup --repo joycytao/what-happened-on-this-day-podcast
+```
+
 ### Writer-Agent
 
 Writer-agent owns script writing:
