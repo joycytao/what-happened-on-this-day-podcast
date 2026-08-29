@@ -2,7 +2,7 @@
 
 ## Role
 
-The producer-agent turns an accepted transcript into reviewable podcast audio artifacts.
+The producer-agent turns an accepted canonical `transcript.md` script into reviewable podcast audio artifacts.
 
 It owns production rendering, render metadata, SFX/BGM/pause cue preservation, and future audio mixing work. It does not choose historical subjects, write transcripts, or decide episode scope.
 
@@ -13,7 +13,7 @@ In the scheduled agent-pull workflow, producer-agent may only pick up a GitHub i
 - the issue has `agent:producer`
 - the issue has `status:producing`
 - the issue does not already have `claim:producer-agent`
-- required writer artifacts exist in the main branch artifact location
+- required writer artifacts exist in the main branch artifact location, including canonical `transcript.md`
 - PM writer quality validation would pass
 
 Producer-agent must ignore issues without `agent:producer`. It must not move the issue to `status:review`; PM owns review advancement after the producer PR is merged and audio artifacts pass validation.
@@ -32,7 +32,7 @@ The production spec defines the target local AI voice engine, sound design stand
 
 Use the configured voice engine for narration speech generation. Voicebox dry-run mode may write clearly marked stub output for tests, but production mode must call the local Voicebox HTTP API or fail explicitly. The repo-local production spec defines Qwen3-TTS as the target local offline production engine. Do not rely on the speech engine to directly generate arbitrary non-speech podcast SFX such as bells, clock ticks, whooshes, or time-machine transitions.
 
-When transcript text contains production cues, producer-agent must preserve them for review and future reruns:
+When canonical `transcript.md` contains production cues, producer-agent must parse the markdown, strip cues from narration text, and preserve the cues for review and future reruns:
 
 ```md
 [SFX: time machine hum, 2s]

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { runProducerAgent } from "../../agents/producer-agent";
+import { runProducerAgent, runProducerAgentFromTranscriptMarkdown } from "../../agents/producer-agent";
 import { extractProductionCues } from "../../agents/producer-agent/sfx-cues";
 import { resolveProductionCues } from "../../agents/producer-agent/sfx-resolver.js";
 import {
@@ -30,6 +30,58 @@ describe("producer agent", () => {
 
     expect(result.audioPath).toContain("final.mp3");
     expect(result.metadataPath).toContain("render-metadata.json");
+  });
+
+  it("renders from canonical transcript.md and records the source path", async () => {
+    const outputDir = await fs.mkdtemp(path.join(os.tmpdir(), "producer-agent-markdown-"));
+    const transcriptPath = path.join(outputDir, "transcript.md");
+
+    await fs.writeFile(
+      transcriptPath,
+      [
+        "# Transcript",
+        "",
+        "Estimated duration: 5 minutes",
+        "",
+        "## Opening",
+        "",
+        "[SFX: time machine hum, 2s]",
+        "Welcome to the launch.",
+        "",
+        "## Time Machine Hook",
+        "",
+        "You press the glowing button. [Action: tap your fingers twice]",
+        "",
+        "## Closing",
+        "",
+        "Back to today. [SFX: soft bell chime]",
+        "",
+        "## TTS Notes",
+        "",
+        "- Pronunciation: launch",
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const result = await runProducerAgentFromTranscriptMarkdown(transcriptPath, outputDir);
+    const metadata = JSON.parse(await fs.readFile(result.metadataPath, "utf8"));
+    const manifest = JSON.parse(await fs.readFile(result.sfxManifestPath, "utf8"));
+    const finalAudio = await fs.readFile(result.audioPath, "utf8");
+
+    expect(metadata.sourceTranscriptPath).toBe(transcriptPath);
+    expect(metadata.voicebox.narrationText).toBe(
+      "Welcome to the launch.\n\nYou press the glowing button.\n\nBack to today."
+    );
+    expect(manifest).toMatchObject({
+      cueCount: 3,
+      cues: [
+        { type: "sfx", description: "time machine hum" },
+        { type: "action", description: "tap your fingers twice" },
+        { type: "sfx", description: "soft bell chime" }
+      ]
+    });
+    expect(finalAudio).toContain("MIXED_AUDIO_STUB");
   });
 
   it("extracts timed SFX, BGM, and pause cues from transcript text", () => {

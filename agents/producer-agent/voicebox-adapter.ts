@@ -65,6 +65,9 @@ type VoiceboxRenderOptions = {
   sleep?: (durationMs: number) => Promise<void>;
 };
 
+type VoiceboxRenderJob = Pick<AudioJob, "voicePreset" | "outputAudioPath" | "transcript"> &
+  Partial<Pick<AudioJob, "sourceTranscriptPath">>;
+
 type VoiceboxResponsePayload = {
   generation_id?: string;
   generationId?: string;
@@ -149,7 +152,7 @@ export function buildVoiceboxRequest(config: VoiceboxConfig, narrationText: stri
 }
 
 export async function renderWithVoicebox(
-  job: Pick<AudioJob, "voicePreset" | "outputAudioPath" | "transcript">,
+  job: VoiceboxRenderJob,
   options: VoiceboxRenderOptions = {}
 ) {
   const config = options.config ?? validateVoiceboxConfig({
@@ -209,6 +212,7 @@ export async function renderWithVoicebox(
       {
         engine: "voicebox",
         voicePreset: job.voicePreset,
+        sourceTranscriptPath: job.sourceTranscriptPath,
         segmentCount: job.transcript.segments.length,
         voicebox: {
           status: "dry-run",
@@ -216,6 +220,7 @@ export async function renderWithVoicebox(
           endpoint: null,
           ttsEngine: null,
           voiceProfile: resolveVoiceProfile(config),
+          narrationText,
           fallbackStatus: "stub-audio"
         },
         mixer: {
@@ -242,7 +247,7 @@ export async function renderWithVoicebox(
 
 async function renderProductionVoicebox(input: {
   config: VoiceboxConfig;
-  job: Pick<AudioJob, "voicePreset" | "outputAudioPath" | "transcript">;
+  job: VoiceboxRenderJob;
   narrationText: string;
   metadataPath: string;
   sfxManifestPath: string;
@@ -402,7 +407,7 @@ async function writeSfxManifest(
 async function writeRenderMetadata(
   metadataPath: string,
   input: {
-    job: Pick<AudioJob, "voicePreset" | "outputAudioPath" | "transcript">;
+    job: VoiceboxRenderJob;
     config: VoiceboxConfig;
     request: VoiceboxRequest;
     narrationText: string;
@@ -422,6 +427,7 @@ async function writeRenderMetadata(
       {
         engine: "voicebox",
         voicePreset: input.job.voicePreset,
+        sourceTranscriptPath: input.job.sourceTranscriptPath,
         segmentCount: input.job.transcript.segments.length,
         voicebox: {
           status: input.status,
