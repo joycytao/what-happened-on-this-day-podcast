@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { ResearchDossier } from "../../src/contracts";
+import { serializeTranscriptMarkdown } from "../../src/contracts";
 import { buildTranscript } from "./build-transcript";
 import type { Transcript } from "../../src/contracts";
 
@@ -38,7 +39,7 @@ export async function writeTranscriptArtifact(transcript: Transcript, runDir: st
 export async function writeTranscriptMarkdownArtifact(transcript: Transcript, runDir: string) {
   const transcriptPath = path.join(runDir, "transcript.md");
 
-  await fs.writeFile(transcriptPath, serializeTranscriptForMarkdown(transcript), "utf8");
+  await fs.writeFile(transcriptPath, serializeTranscriptMarkdown(transcript), "utf8");
 
   return transcriptPath;
 }
@@ -121,31 +122,4 @@ function hasFiveModuleStructure(transcript: Transcript) {
 
 function countMatches(input: string, pattern: RegExp) {
   return input.match(pattern)?.length ?? 0;
-}
-
-function serializeTranscriptForMarkdown(transcript: Transcript) {
-  const lines = [
-    "# Transcript",
-    "",
-    `Estimated duration: ${transcript.estimatedDurationMin} minutes`,
-    "",
-    "## Opening",
-    "",
-    transcript.opening,
-    ""
-  ];
-
-  for (const segment of transcript.segments) {
-    lines.push(`## ${segment.heading}`, "", segment.body, "");
-  }
-
-  lines.push("## Closing", "", transcript.closing, "", "## TTS Notes", "");
-
-  for (const note of transcript.ttsNotes) {
-    lines.push(`- ${note}`);
-  }
-
-  lines.push("");
-
-  return lines.join("\n");
 }

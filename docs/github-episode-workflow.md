@@ -335,6 +335,7 @@ Writer artifact contract:
 - `transcript.md` is the canonical human-readable podcast script.
 - `transcript.json` is the machine-readable transcript and must be derived from or consistent with `transcript.md`.
 - `transcript-quality-report.json` is the writer self-report.
+- `parseTranscriptMarkdown(markdown)` and `serializeTranscriptMarkdown(transcript)` are the shared conversion functions between `transcript.md` and the `Transcript` contract.
 - PM must block producer handoff when any required writer artifact is missing.
 - PM must validate `transcript.json` against the transcript schema.
 - PM must recompute deterministic transcript quality checks and must not trust a passing writer report by itself.
