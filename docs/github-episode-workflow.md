@@ -324,6 +324,15 @@ It assigns work through labels and merged artifacts:
 
 Downstream work must not depend on unmerged branch artifacts or in-memory objects from PM.
 
+Writer artifact contract:
+
+- `transcript.md` is the canonical human-readable podcast script.
+- `transcript.json` is the machine-readable transcript and must be derived from or consistent with `transcript.md`.
+- `transcript-quality-report.json` is the writer self-report.
+- PM must block producer handoff when any required writer artifact is missing.
+- PM must validate `transcript.json` against the transcript schema.
+- PM must recompute deterministic transcript quality checks and must not trust a passing writer report by itself.
+
 ## Practical Expectations
 
 Normal daily operation:

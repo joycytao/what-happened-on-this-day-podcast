@@ -32,7 +32,7 @@ import { triageFeatureRequest, type FeatureIntakeInput } from "./feature-intake"
 import { createRunManifest } from "./run-manifest";
 import { parseCliArgs } from "../../src/lib/cli";
 import { createLogger } from "../../src/lib/logger";
-import { transcriptSchema, type Transcript } from "../../src/contracts";
+import { transcriptSchema, writerArtifactPaths, type Transcript } from "../../src/contracts";
 
 export { resolveEpisodeRequest, createRunManifest };
 
@@ -42,8 +42,29 @@ type ProducerResult = {
 };
 
 export async function assertWriterTranscriptArtifact(runDir: string) {
-  const transcriptPath = path.join(runDir, "transcript.json");
+  const missingArtifacts = [];
 
+  for (const artifactPath of writerArtifactPaths) {
+    const absolutePath = path.join(runDir, artifactPath);
+
+    try {
+      const stat = await fs.stat(absolutePath);
+
+      if (!stat.isFile()) {
+        missingArtifacts.push(artifactPath);
+      }
+    } catch {
+      missingArtifacts.push(artifactPath);
+    }
+  }
+
+  if (missingArtifacts.length > 0) {
+    throw new Error(
+      `Writer transcript artifact is incomplete: missing ${missingArtifacts.join(", ")} in ${runDir}`
+    );
+  }
+
+  const transcriptPath = path.join(runDir, "transcript.json");
   try {
     return transcriptSchema.parse(JSON.parse(await fs.readFile(transcriptPath, "utf8")));
   } catch (error) {

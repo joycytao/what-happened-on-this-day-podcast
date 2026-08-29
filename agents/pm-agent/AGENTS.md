@@ -74,12 +74,13 @@ Research is not complete until these files exist and have been attached to the G
 - `references/research-references.json`
 - `references/README.md`
 
-Writing is not complete until both writer artifacts exist and pass PM validation:
+Writing is not complete until all required writer artifacts exist and pass PM validation:
 
+- `transcript.md`
 - `transcript.json`
 - `transcript-quality-report.json`
 
-The PM agent must validate `transcript.json` with the transcript schema, then verify the quality report and independently recompute deterministic quality checks before passing work to producer-agent. The PM agent must not pass a transcript to producer-agent when the quality report is missing, failed, or inconsistent with the transcript content.
+`transcript.md` is the canonical human-readable script. `transcript.json` must be derived from or consistent with `transcript.md`. The PM agent must validate that all three files exist, validate `transcript.json` with the transcript schema, then verify the quality report and independently recompute deterministic quality checks before passing work to producer-agent. The PM agent must not pass a transcript to producer-agent when any writer artifact is missing, the quality report is failed, or the report is inconsistent with the transcript content.
 
 ## System Issue Completion Rules
 

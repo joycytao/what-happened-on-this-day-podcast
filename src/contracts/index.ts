@@ -62,6 +62,23 @@ export const transcriptSchema = z.object({
   ttsNotes: z.array(z.string())
 });
 
+export const writerArtifactPaths = [
+  "transcript.md",
+  "transcript.json",
+  "transcript-quality-report.json"
+] as const;
+
+export const writerArtifactContractSchema = z.object({
+  requiredArtifacts: z.tuple([
+    z.literal("transcript.md"),
+    z.literal("transcript.json"),
+    z.literal("transcript-quality-report.json")
+  ]),
+  canonicalArtifact: z.literal("transcript.md"),
+  machineReadableArtifact: z.literal("transcript.json"),
+  qualityReportArtifact: z.literal("transcript-quality-report.json")
+});
+
 export const audioJobSchema = z.object({
   voicePreset: z.string(),
   sourceTranscriptPath: z.string(),
@@ -73,4 +90,5 @@ export type EpisodeRequest = z.infer<typeof episodeRequestSchema>;
 export type ResearchDossier = z.infer<typeof researchDossierSchema>;
 export type ResearchReferences = z.infer<typeof researchReferencesSchema>;
 export type Transcript = z.infer<typeof transcriptSchema>;
+export type WriterArtifactContract = z.infer<typeof writerArtifactContractSchema>;
 export type AudioJob = z.infer<typeof audioJobSchema>;

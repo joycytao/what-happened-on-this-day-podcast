@@ -72,6 +72,14 @@ Do not use cues to hide unclear writing. If the listener needs context, write th
 
 The final transcript should make cues easy for producer-agent to extract from the opening, segment bodies, and closing.
 
+Writer-agent must write these required handoff artifacts before opening a PR:
+
+- `transcript.md`
+- `transcript.json`
+- `transcript-quality-report.json`
+
+`transcript.md` is the canonical human-readable script. `transcript.json` must be derived from or consistent with the markdown script. `transcript-quality-report.json` records writer self-check results, but PM still recomputes deterministic checks before advancing the issue.
+
 Writer-agent does not resolve SFX assets or mix audio. It hands off clear cue text; producer-agent preserves those cues in `audio/sfx-manifest.json` and owns production resolution.
 
 ## Evidence Base

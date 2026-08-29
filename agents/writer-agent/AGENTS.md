@@ -71,12 +71,13 @@ Audio cue density must follow the local scriptwriter spec: at least one `[SFX]` 
 
 ## Completion Gate
 
-Writer-agent must persist both durable handoff artifacts before producer-agent can receive the work:
+Writer-agent must persist all required durable handoff artifacts before producer-agent can receive the work:
 
+- `transcript.md`
 - `transcript.json`
 - `transcript-quality-report.json`
 
-The quality report must mark each deterministic script-standard check as `pass` or `fail`. A missing or failed quality report means the transcript is not ready for producer-agent handoff.
+`transcript.md` is the canonical human-readable podcast script. `transcript.json` must be derived from or consistent with `transcript.md`. The quality report must mark each deterministic script-standard check as `pass` or `fail`. A missing artifact, failed quality report, or report that conflicts with PM's recomputed checks means the transcript is not ready for producer-agent handoff.
 
 Before finishing transcript work, writer-agent must:
 

@@ -4,7 +4,9 @@ import {
   episodeRequestSchema,
   researchDossierSchema,
   researchReferencesSchema,
-  transcriptSchema
+  transcriptSchema,
+  writerArtifactContractSchema,
+  writerArtifactPaths
 } from "../../src/contracts";
 
 describe("shared podcast contracts", () => {
@@ -78,5 +80,22 @@ describe("shared podcast contracts", () => {
         transcript
       })
     ).toMatchObject({ voicePreset: "story-narrator-01" });
+  });
+
+  it("defines the required writer artifact contract", () => {
+    expect(writerArtifactPaths).toEqual([
+      "transcript.md",
+      "transcript.json",
+      "transcript-quality-report.json"
+    ]);
+
+    expect(() =>
+      writerArtifactContractSchema.parse({
+        requiredArtifacts: writerArtifactPaths,
+        canonicalArtifact: "transcript.md",
+        machineReadableArtifact: "transcript.json",
+        qualityReportArtifact: "transcript-quality-report.json"
+      })
+    ).not.toThrow();
   });
 });
