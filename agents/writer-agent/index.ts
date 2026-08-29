@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { ResearchDossier } from "../../src/contracts";
-import { serializeTranscriptMarkdown } from "../../src/contracts";
+import { researchDossierSchema, serializeTranscriptMarkdown } from "../../src/contracts";
 import { buildTranscript } from "./build-transcript";
 import type { Transcript } from "../../src/contracts";
 
@@ -26,6 +26,13 @@ export async function runWriterAgent(dossier: ResearchDossier, options: { runDir
   }
 
   return transcript;
+}
+
+export async function runWriterAgentFromRunDir(runDir: string) {
+  const dossierPath = path.join(runDir, "research-dossier.json");
+  const dossier = researchDossierSchema.parse(JSON.parse(await fs.readFile(dossierPath, "utf8")));
+
+  return runWriterAgent(dossier, { runDir });
 }
 
 export async function writeTranscriptArtifact(transcript: Transcript, runDir: string) {
