@@ -25,7 +25,7 @@ describe("writer agent", () => {
     expect(transcript.estimatedDurationMin).toBeLessThanOrEqual(8);
   });
 
-  it("writes transcript and quality report artifacts when given a run directory", async () => {
+  it("writes required writer artifacts when given a run directory", async () => {
     const runDir = await fs.mkdtemp(path.join(os.tmpdir(), "writer-agent-artifacts-"));
 
     await runWriterAgent({
@@ -41,9 +41,13 @@ describe("writer agent", () => {
       safetyNotes: []
     }, { runDir });
 
+    const transcriptMarkdown = await fs.readFile(path.join(runDir, "transcript.md"), "utf8");
     const transcript = JSON.parse(await fs.readFile(path.join(runDir, "transcript.json"), "utf8"));
     const qualityReport = JSON.parse(await fs.readFile(path.join(runDir, "transcript-quality-report.json"), "utf8"));
 
+    expect(transcriptMarkdown).toContain("# Transcript");
+    expect(transcriptMarkdown).toContain("## Opening");
+    expect(transcriptMarkdown).toContain("## Closing");
     expect(transcript.opening).toContain("Good morning");
     expect(qualityReport).toMatchObject({
       status: "fail",

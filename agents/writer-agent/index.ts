@@ -19,6 +19,7 @@ export async function runWriterAgent(dossier: ResearchDossier, options: { runDir
   const transcript = buildTranscript(dossier);
 
   if (options.runDir) {
+    await writeTranscriptMarkdownArtifact(transcript, options.runDir);
     await writeTranscriptArtifact(transcript, options.runDir);
     await writeTranscriptQualityReport(transcript, options.runDir);
   }
@@ -34,6 +35,14 @@ export async function writeTranscriptArtifact(transcript: Transcript, runDir: st
   return transcriptPath;
 }
 
+export async function writeTranscriptMarkdownArtifact(transcript: Transcript, runDir: string) {
+  const transcriptPath = path.join(runDir, "transcript.md");
+
+  await fs.writeFile(transcriptPath, serializeTranscriptForMarkdown(transcript), "utf8");
+
+  return transcriptPath;
+}
+
 export async function writeTranscriptQualityReport(transcript: Transcript, runDir: string) {
   const reportPath = path.join(runDir, "transcript-quality-report.json");
   const report = evaluateTranscriptQuality(transcript);
@@ -44,7 +53,7 @@ export async function writeTranscriptQualityReport(transcript: Transcript, runDi
 }
 
 export function evaluateTranscriptQuality(transcript: Transcript): TranscriptQualityReport {
-  const scriptText = [transcript.opening, ...transcript.segments.map((segment) => segment.body), transcript.closing].join("\n");
+  const scriptText = [transcript.opening, ...transcript.segments.map((segment: Transcript["segments"][number]) => segment.body), transcript.closing].join("\n");
   const sfxOrBgmCueCount = countMatches(scriptText, /\[(?:SFX|BGM):[^\]]+\]/gi);
   const attentionResetCount = countMatches(scriptText, /\[Action:[^\]]+\]/gi) + countMatches(scriptText, /\?/g);
   const secondPersonCount = countMatches(scriptText, /\b(?:you|your)\b/gi);
@@ -77,7 +86,7 @@ export function evaluateTranscriptQuality(transcript: Transcript): TranscriptQua
       "at least 10 uses of you/your"
     ),
     pronunciation_notes: buildCheck(
-      transcript.ttsNotes.some((note) => /pronunciation|phonetic/i.test(note)),
+      transcript.ttsNotes.some((note: string) => /pronunciation|phonetic/i.test(note)),
       transcript.ttsNotes.length,
       "ttsNotes include pronunciation or phonetic support"
     )
@@ -112,4 +121,31 @@ function hasFiveModuleStructure(transcript: Transcript) {
 
 function countMatches(input: string, pattern: RegExp) {
   return input.match(pattern)?.length ?? 0;
+}
+
+function serializeTranscriptForMarkdown(transcript: Transcript) {
+  const lines = [
+    "# Transcript",
+    "",
+    `Estimated duration: ${transcript.estimatedDurationMin} minutes`,
+    "",
+    "## Opening",
+    "",
+    transcript.opening,
+    ""
+  ];
+
+  for (const segment of transcript.segments) {
+    lines.push(`## ${segment.heading}`, "", segment.body, "");
+  }
+
+  lines.push("## Closing", "", transcript.closing, "", "## TTS Notes", "");
+
+  for (const note of transcript.ttsNotes) {
+    lines.push(`- ${note}`);
+  }
+
+  lines.push("");
+
+  return lines.join("\n");
 }
