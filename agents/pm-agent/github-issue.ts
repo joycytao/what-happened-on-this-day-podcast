@@ -46,6 +46,8 @@ export type EpisodeIssueContextUpdates = {
   outputRunPath?: string;
 };
 
+export type EpisodeAgentLabel = "agent:research" | "agent:writer" | "agent:producer";
+
 export function resolveEpisodeDateInput(input: EpisodeDateInput): EpisodeRequest {
   const titleSlug = slugifyEpisodeTitle(formatEpisodeTitleDate(input.date));
 
@@ -78,7 +80,7 @@ export function buildEpisodeIssueDraft(input: EpisodeBrief | EpisodeRequest | Ep
       `duration_max_min: ${request.durationMaxMin}`,
       `current_stage: ${request.currentStage}`
     ].join("\n"),
-    labels: ["type:episode", "status:ready"]
+    labels: ["status:ready", "agent:research"]
   };
 }
 
@@ -122,7 +124,7 @@ function buildBriefEpisodeIssueDraft(brief: EpisodeBrief): EpisodeIssueDraft {
       "- [ ] Produce audio artifact and render metadata",
       "- [ ] Prepare episode for human review"
     ].join("\n"),
-    labels: ["type:episode", "status:ready"]
+    labels: ["status:ready", "agent:research"]
   };
 }
 
@@ -174,10 +176,7 @@ export async function createEpisodeIssueFromDate(input: {
       draft.title,
       "--body",
       draft.body,
-      "--label",
-      draft.labels[0],
-      "--label",
-      draft.labels[1]
+      ...draft.labels.flatMap((label) => ["--label", label])
     ],
     input.repoRoot ? { cwd: input.repoRoot } : undefined
   );
@@ -199,7 +198,7 @@ export function selectEpisodeIssueForPickup(issues: EpisodeIssue[], options: { i
     if (issue.state && issue.state !== "OPEN") return false;
 
     const labels = new Set(issue.labels.map(normalizeLabel));
-    return labels.has("type:episode") && labels.has("status:ready");
+    return labels.has("status:ready") && labels.has("agent:research");
   });
 
   if (typeof options.issueNumber === "number") {
@@ -252,6 +251,37 @@ export async function loadReadyEpisodeIssues(input: { repo: string }): Promise<E
     state: issue.state,
     labels: issue.labels.map((label) => label.name)
   }));
+}
+
+export async function loadEpisodeIssueFromGitHub(input: {
+  repo: string;
+  issueNumber: number;
+  execFile?: ExecFileFn;
+}): Promise<EpisodeIssue> {
+  const output = await (input.execFile ?? execFileText)("gh", [
+    "issue",
+    "view",
+    String(input.issueNumber),
+    "--repo",
+    input.repo,
+    "--json",
+    "number,title,body,state,labels"
+  ]);
+  const parsed = JSON.parse(output) as {
+    number: number;
+    title: string;
+    body: string;
+    state: "OPEN" | "CLOSED";
+    labels: Array<{ name: string }>;
+  };
+
+  return {
+    issueNumber: parsed.number,
+    title: parsed.title,
+    body: parsed.body,
+    state: parsed.state,
+    labels: parsed.labels.map((label) => label.name)
+  };
 }
 
 export function buildEpisodeIssueContextBody(body: string, updates: EpisodeIssueContextUpdates) {
@@ -310,6 +340,74 @@ export async function updateEpisodeIssueContextOnGitHub(
     labels: nextLabels,
     issueUrl: stdout.trim()
   };
+}
+
+export async function updateEpisodeIssueStageOnGitHub(
+  issue: EpisodeIssue,
+  updates: EpisodeIssueContextUpdates & { nextAgentLabel?: EpisodeAgentLabel },
+  options: { repo: string; execFile?: ExecFileFn }
+) {
+  const body = buildEpisodeIssueContextBody(issue.body, updates);
+  const nextStatusLabel = updates.currentStage ? `status:${updates.currentStage}` : undefined;
+  const args = [
+    "issue",
+    "edit",
+    String(issue.issueNumber),
+    "--repo",
+    options.repo,
+    "--body",
+    body
+  ];
+
+  for (const label of issue.labels) {
+    const normalized = normalizeLabel(label);
+
+    if (normalized.startsWith("status:") || normalized.startsWith("agent:") || normalized.startsWith("claim:")) {
+      args.push("--remove-label", label);
+    }
+  }
+
+  if (nextStatusLabel) {
+    args.push("--add-label", nextStatusLabel);
+  }
+
+  if (updates.nextAgentLabel) {
+    args.push("--add-label", updates.nextAgentLabel);
+  }
+
+  const output = await (options.execFile ?? execFileText)("gh", args);
+  const nextLabels = [
+    ...issue.labels.filter((label) => {
+      const normalized = normalizeLabel(label);
+      return !normalized.startsWith("status:") && !normalized.startsWith("agent:") && !normalized.startsWith("claim:");
+    }),
+    ...(nextStatusLabel ? [nextStatusLabel] : []),
+    ...(updates.nextAgentLabel ? [updates.nextAgentLabel] : [])
+  ];
+
+  return {
+    ...issue,
+    body,
+    labels: nextLabels,
+    issueUrl: output.trim()
+  };
+}
+
+export async function commentOnEpisodeIssue(input: {
+  repo: string;
+  issueNumber: number;
+  body: string;
+  execFile?: ExecFileFn;
+}) {
+  return (input.execFile ?? execFileText)("gh", [
+    "issue",
+    "comment",
+    String(input.issueNumber),
+    "--repo",
+    input.repo,
+    "--body",
+    input.body
+  ]);
 }
 
 export async function assertResearchPackageArtifacts(runDir: string) {
@@ -405,17 +503,7 @@ export async function uploadResearchPackageToGitHubIssue(input: {
 }
 
 export function resolveEpisodeRequest(issue: EpisodeIssue) {
-  const fields = Object.fromEntries(
-    issue.body
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.includes(":"))
-      .map((line) => {
-        const normalizedLine = line.replace(/^-\s*/, "");
-        const [key, ...rest] = normalizedLine.split(":");
-        return [key.trim(), rest.join(":").trim()];
-      })
-  );
+  const fields = parseEpisodeIssueFields(issue.body);
 
   return episodeRequestSchema.parse({
     date: fields.date,
@@ -428,6 +516,20 @@ export function resolveEpisodeRequest(issue: EpisodeIssue) {
     entityType: fields.entity_type || undefined,
     currentStage: fields.current_stage ?? "ready"
   });
+}
+
+export function parseEpisodeIssueFields(body: string) {
+  return Object.fromEntries(
+    body
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.includes(":"))
+      .map((line) => {
+        const normalizedLine = line.replace(/^-\s*/, "");
+        const [key, ...rest] = normalizedLine.split(":");
+        return [key.trim(), rest.join(":").trim()];
+      })
+  );
 }
 
 function replaceIssueField(body: string, field: string, value: string) {

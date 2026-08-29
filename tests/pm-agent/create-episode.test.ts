@@ -29,7 +29,7 @@ describe("pm agent episode creation", () => {
     });
 
     expect(draft.title).toBe("Episode: August 24, 2026");
-    expect(draft.labels).toEqual(["type:episode", "status:ready"]);
+    expect(draft.labels).toEqual(["status:ready", "agent:research"]);
     expect(draft.body).toContain("date: 2026-08-24");
     expect(draft.body).toContain("episode_slug: 2026-08-24-august-24-2026");
     expect(draft.body).toContain("language: en");
@@ -59,8 +59,8 @@ describe("pm agent episode creation", () => {
     expect(calls[0]?.args).toContain("issue");
     expect(calls[0]?.args).toContain("create");
     expect(calls[0]?.args).toContain("--label");
-    expect(calls[0]?.args).toContain("type:episode");
     expect(calls[0]?.args).toContain("status:ready");
+    expect(calls[0]?.args).toContain("agent:research");
     expect(result.issueNumber).toBe(42);
     expect(result.url).toBe(
       "https://github.com/joycytao/what-happened-on-this-day-podcast/issues/42"
@@ -102,7 +102,7 @@ describe("pm agent episode creation", () => {
           url: "https://github.com/joycytao/what-happened-on-this-day-podcast/issues/42",
           title: "Episode: August 24, 2026",
           body: "date: 2026-08-24",
-          labels: ["type:episode", "status:ready"],
+          labels: ["status:ready", "agent:research"],
           request: {
             date: "2026-08-24",
             episodeSlug: "2026-08-24-august-24-2026",

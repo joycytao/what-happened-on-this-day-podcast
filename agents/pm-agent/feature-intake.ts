@@ -33,7 +33,7 @@ export type FeatureIntakeDecision =
     }
   | {
       action: "create_ticket" | "create_spike";
-      issueType: "type:project" | "type:episode";
+      workflow: "episode" | "system";
       reasoning: string[];
     };
 
@@ -70,10 +70,10 @@ export function triageFeatureRequest(input: FeatureIntakeInput): FeatureIntakeDe
   if (isEpisodeRequest(normalizedRequest)) {
     return {
       action: "create_ticket",
-      issueType: "type:episode",
+      workflow: "episode",
       reasoning: [
         "The request is for generating a dated podcast episode.",
-        "Episode production work belongs in a type:episode issue."
+        "Episode production work should enter the agent-routed episode workflow."
       ]
     };
   }
@@ -81,7 +81,7 @@ export function triageFeatureRequest(input: FeatureIntakeInput): FeatureIntakeDe
   if (needsSpike(normalizedRequest)) {
     return {
       action: "create_spike",
-      issueType: "type:project",
+      workflow: "system",
       reasoning: [
         "The request contains unknown technical feasibility or asks whether an implementation is possible.",
         "PM agent should create a spike ticket before committing to implementation."
@@ -91,7 +91,7 @@ export function triageFeatureRequest(input: FeatureIntakeInput): FeatureIntakeDe
 
   return {
     action: "create_ticket",
-    issueType: "type:project",
+    workflow: "system",
     reasoning: [
       "The request changes the product or system rather than producing one dated episode.",
       "PM agent has enough information to create a project ticket."

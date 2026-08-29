@@ -60,6 +60,14 @@ The PM agent does not pass work downstream by direct function call or informal c
 - each role agent writes artifacts on a branch and opens a PR
 - PM advances to the next `agent:*` only after the PR is merged and artifacts pass validation on main
 
+PM gatekeeper commands:
+
+- `create-episode`: create a dated episode issue with `status:ready` and `agent:research`
+- `pickup-episode`: initialize a ready episode issue for research without running downstream agents
+- `audit-episode`: inspect issue metadata and artifact paths without mutating state
+- `advance-after-merge`: validate merged artifacts on main before advancing labels
+- `block-episode`: mark an episode blocked and record the reason
+
 Research is not complete until these files exist and have been attached to the GitHub issue:
 
 - `research-dossier.json`
