@@ -212,3 +212,18 @@ Read these before changing workflow behavior:
 - Do not make the PM agent choose the final subject, write the transcript, or produce audio.
 - Keep workflow state explicit in issue metadata and run artifacts.
 - Add or update tests when changing PM agent behavior.
+
+## Weekly Workflow Retrospective
+
+Weekly workflow improvements must use the accessible Codex task records from
+the preceding week across the relevant projects. For every proposed skill or
+rule, cite a specific request, correction, artifact, failed check, review
+comment, or repeated implementation pattern, then give one concrete next
+action that can become an Issue or acceptance criterion. If the records do not
+support a conclusion, state that evidence is insufficient.
+
+When updating this file or a related automation, make incremental changes tied
+to that evidence. Preserve the PM/research/writer/producer boundaries and the
+existing artifact gates. Report separately: observed evidence, recommended
+skills and next actions, file or automation changes, verification performed,
+and unresolved limitations.
