@@ -10,7 +10,8 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "pm-agent": "node --import tsx ./agents/pm-agent/index.ts",
-    "research-agent": "node --import tsx ./agents/research-agent/index.ts"
+    "research-agent": "node --import tsx ./agents/research-agent/index.ts",
+    "writer-agent": "node --import tsx ./agents/writer-agent/index.ts"
   },
   "dependencies": {
     "zod": "^3.24.1"

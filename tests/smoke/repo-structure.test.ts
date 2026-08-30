@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import fs from "node:fs/promises";
 import { resolveRepoPaths } from "../../src/lib/fs-paths";
 import { createLogger } from "../../src/lib/logger";
 import { parseCliArgs } from "../../src/lib/cli";
@@ -39,6 +40,15 @@ describe("repo foundation", () => {
         "issue-number": "14",
         "dry-run": true
       }
+    });
+  });
+
+  it("exposes role-agent scheduled runner scripts", async () => {
+    const packageJson = JSON.parse(await fs.readFile(new URL("../../package.json", import.meta.url), "utf8"));
+
+    expect(packageJson.scripts).toMatchObject({
+      "research-agent": "node --import tsx ./agents/research-agent/index.ts",
+      "writer-agent": "node --import tsx ./agents/writer-agent/index.ts"
     });
   });
 });
