@@ -6,7 +6,7 @@ This SOP defines how producer-agent should handle narration, production cues, an
 
 ## Standard Procedure
 
-1. Receive an accepted transcript from writer-agent through the PM workflow.
+1. Read the accepted canonical `transcript.md` artifact from the run folder after PM has validated writer artifacts on `main`.
 2. Read and follow the repo-local kids podcast specs:
 
    - `skills/kids-podcast-common-spec/SKILL.md`
@@ -18,7 +18,7 @@ This SOP defines how producer-agent should handle narration, production cues, an
    - `dry-run`: writes clearly marked stub output for local pipeline tests only.
    - `production`: calls the local Voicebox HTTP API and fails clearly if Voicebox is unavailable.
 
-4. Scan the transcript opening, segment bodies, and closing for production cues in these forms:
+4. Parse `transcript.md`, then scan the transcript opening, segment bodies, and closing for production cues in these forms:
 
    ```md
    [SFX: description, optional duration]
@@ -28,11 +28,12 @@ This SOP defines how producer-agent should handle narration, production cues, an
    [Action: physical prompt]
    ```
 
-5. Preserve extracted cues in `audio/sfx-manifest.json`.
-6. Preserve render metadata in `audio/render-metadata.json`.
-7. Produce or preserve the final audio path as `audio/final.mp3`.
-8. Check production QA from the local production spec.
-9. Report cue count, cue types, mastering status, voice engine status, and any unresolved cue requirements in the production result or handoff notes.
+5. Build Voicebox narration text by removing production cues from the parsed script.
+6. Preserve extracted cues in `audio/sfx-manifest.json`.
+7. Preserve render metadata in `audio/render-metadata.json`, including `sourceTranscriptPath`.
+8. Produce or preserve the final audio path as `audio/final.mp3`.
+9. Check production QA from the local production spec.
+10. Report cue count, cue types, mastering status, voice engine status, and any unresolved cue requirements in the production result or handoff notes.
 
 ## Real Voicebox Render Preflight
 
