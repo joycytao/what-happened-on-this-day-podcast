@@ -250,6 +250,12 @@ Writer-agent owns script writing:
 
 Writer-agent must not add `agent:producer` or advance the stage.
 
+Scheduled command:
+
+```sh
+npm run writer-agent -- pickup --repo joycytao/what-happened-on-this-day-podcast
+```
+
 ### Producer-Agent
 
 Producer-agent owns audio production:
