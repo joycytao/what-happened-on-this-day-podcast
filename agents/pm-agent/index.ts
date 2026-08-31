@@ -16,6 +16,7 @@ import {
   updateEpisodeIssueContextOnGitHub,
   updateEpisodeIssueStageOnGitHub,
   type EpisodeIssue,
+  type EpisodeAgentLabel,
   type EpisodeIssueContextUpdates,
   type EpisodeIssueDraft
 } from "./github-issue";
@@ -471,70 +472,174 @@ export async function advanceEpisodeAfterMerge(input: {
   repo: string;
   repoRoot: string;
   issue: EpisodeIssue;
-}) {
+}, dependencies: {
+  updateEpisodeIssueStage?: (
+    issue: EpisodeIssue,
+    updates: EpisodeIssueContextUpdates & { nextAgentLabel?: EpisodeAgentLabel }
+  ) => Promise<EpisodeIssue>;
+  commentOnIssue?: (input: { issueNumber: number; body: string }) => Promise<void>;
+} = {}) {
   const audit = await auditEpisode({ repoRoot: input.repoRoot, issue: input.issue });
+  const updateEpisodeIssueStage =
+    dependencies.updateEpisodeIssueStage ??
+    ((issue: EpisodeIssue, updates: EpisodeIssueContextUpdates & { nextAgentLabel?: EpisodeAgentLabel }) =>
+      updateEpisodeIssueStageOnGitHub(issue, updates, { repo: input.repo }));
+  const commentOnIssue =
+    dependencies.commentOnIssue ??
+    ((comment: { issueNumber: number; body: string }) =>
+      commentOnEpisodeIssue({
+        repo: input.repo,
+        issueNumber: comment.issueNumber,
+        body: comment.body
+      }));
 
   if (audit.activeAgentLabel === "agent:research") {
-    await assertResearchPackageArtifacts(audit.runDir);
-    const issue = await updateEpisodeIssueStageOnGitHub(
-      input.issue,
+    const updates = {
+      currentStage: "writing" as const,
+      outputRunPath: audit.outputRunPath,
+      nextAgentLabel: "agent:writer" as const
+    };
+
+    await runPmGate(
       {
-        currentStage: "writing",
-        outputRunPath: audit.outputRunPath,
-        nextAgentLabel: "agent:writer"
-      },
-      { repo: input.repo }
+        issue: input.issue,
+        gateName: "research artifacts",
+        nextStatusLabel: "status:writing",
+        nextAgentLabel: "agent:writer",
+        validate: () => assertResearchPackageArtifacts(audit.runDir),
+        update: () => updateEpisodeIssueStage(input.issue, updates),
+        commentOnIssue
+      }
     );
 
     return {
-      issueNumber: issue.issueNumber,
+      issueNumber: input.issue.issueNumber,
       currentStage: "writing" as const,
       activeAgentLabel: "agent:writer" as const
     };
   }
 
   if (audit.activeAgentLabel === "agent:writer") {
-    const transcript = await assertWriterTranscriptArtifact(audit.runDir);
-    await assertWriterTranscriptQuality(audit.runDir, transcript);
-    const issue = await updateEpisodeIssueStageOnGitHub(
-      input.issue,
+    const updates = {
+      currentStage: "producing" as const,
+      outputRunPath: audit.outputRunPath,
+      nextAgentLabel: "agent:producer" as const
+    };
+
+    await runPmGate(
       {
-        currentStage: "producing",
-        outputRunPath: audit.outputRunPath,
-        nextAgentLabel: "agent:producer"
-      },
-      { repo: input.repo }
+        issue: input.issue,
+        gateName: "writer artifacts",
+        nextStatusLabel: "status:producing",
+        nextAgentLabel: "agent:producer",
+        validate: async () => {
+          const transcript = await assertWriterTranscriptArtifact(audit.runDir);
+          await assertWriterTranscriptQuality(audit.runDir, transcript);
+        },
+        update: () => updateEpisodeIssueStage(input.issue, updates),
+        commentOnIssue
+      }
     );
 
     return {
-      issueNumber: issue.issueNumber,
+      issueNumber: input.issue.issueNumber,
       currentStage: "producing" as const,
       activeAgentLabel: "agent:producer" as const
     };
   }
 
   if (audit.activeAgentLabel === "agent:producer") {
-    await assertReviewableEpisodeAudio({
-      audioPath: path.join(audit.runDir, "audio", "final.mp3"),
-      metadataPath: path.join(audit.runDir, "audio", "render-metadata.json")
-    });
-    const issue = await updateEpisodeIssueStageOnGitHub(
-      input.issue,
+    const updates = {
+      currentStage: "review" as const,
+      outputRunPath: audit.outputRunPath
+    };
+
+    await runPmGate(
       {
-        currentStage: "review",
-        outputRunPath: audit.outputRunPath
-      },
-      { repo: input.repo }
+        issue: input.issue,
+        gateName: "producer audio",
+        nextStatusLabel: "status:review",
+        validate: () =>
+          assertReviewableEpisodeAudio({
+            audioPath: path.join(audit.runDir, "audio", "final.mp3"),
+            metadataPath: path.join(audit.runDir, "audio", "render-metadata.json")
+          }),
+        update: () => updateEpisodeIssueStage(input.issue, updates),
+        commentOnIssue
+      }
     );
 
     return {
-      issueNumber: issue.issueNumber,
+      issueNumber: input.issue.issueNumber,
       currentStage: "review" as const,
       activeAgentLabel: undefined
     };
   }
 
   throw new Error(`Issue #${input.issue.issueNumber} has no active episode agent label to advance.`);
+}
+
+async function runPmGate(input: {
+  issue: EpisodeIssue;
+  gateName: string;
+  nextStatusLabel: string;
+  nextAgentLabel?: EpisodeAgentLabel;
+  validate: () => Promise<unknown>;
+  update: () => Promise<EpisodeIssue>;
+  commentOnIssue: (input: { issueNumber: number; body: string }) => Promise<void>;
+}) {
+  try {
+    await input.validate();
+  } catch (error) {
+    await input.commentOnIssue({
+      issueNumber: input.issue.issueNumber,
+      body: buildPmGateFailedComment({
+        gateName: input.gateName,
+        reason: error instanceof Error ? error.message : String(error)
+      })
+    });
+    throw error;
+  }
+
+  const issue = await input.update();
+
+  await input.commentOnIssue({
+    issueNumber: input.issue.issueNumber,
+    body: buildPmGatePassedComment({
+      gateName: input.gateName,
+      nextStatusLabel: input.nextStatusLabel,
+      nextAgentLabel: input.nextAgentLabel
+    })
+  });
+
+  return issue;
+}
+
+function buildPmGatePassedComment(input: {
+  gateName: string;
+  nextStatusLabel: string;
+  nextAgentLabel?: EpisodeAgentLabel;
+}) {
+  return [
+    "## PM gate passed",
+    "",
+    `Gate: ${input.gateName}`,
+    `Next status: ${input.nextStatusLabel}`,
+    ...(input.nextAgentLabel ? [`Next agent: ${input.nextAgentLabel}`] : [])
+  ].join("\n");
+}
+
+function buildPmGateFailedComment(input: {
+  gateName: string;
+  reason: string;
+}) {
+  return [
+    "## PM gate failed",
+    "",
+    `Gate: ${input.gateName}`,
+    `Reason: ${input.reason}`,
+    "Next action: fix the missing or invalid merged artifact, then rerun PM advance-after-merge."
+  ].join("\n");
 }
 
 export async function blockEpisode(input: {
