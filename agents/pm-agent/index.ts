@@ -248,6 +248,7 @@ export async function runPmAgentCli(
   const dryRun = options["dry-run"] === true;
   const issueNumber =
     typeof options["issue-number"] === "string" ? Number(options["issue-number"]) : undefined;
+  const limit = parseLimitOption(options.limit);
   const repo =
     typeof options.repo === "string"
       ? options.repo
@@ -276,6 +277,43 @@ export async function runPmAgentCli(
 
   if (["audit-episode", "advance-after-merge", "block-episode"].includes(command)) {
     if (typeof issueNumber !== "number" || Number.isNaN(issueNumber)) {
+      if (command === "advance-after-merge") {
+        const issues = selectEpisodeIssuesForScheduledAdvance(
+          await (dependencies.loadEpisodeIssues ?? (() => loadReadyEpisodeIssues({ repo })))(),
+          { limit }
+        );
+
+        if (issues.length === 0) {
+          return {
+            status: "noop" as const,
+            reason: "No episode issue was eligible for advance-after-merge."
+          };
+        }
+
+        const results = [];
+        for (const issue of issues) {
+          const result = await (dependencies.advanceEpisodeAfterMerge ?? advanceEpisodeAfterMerge)({
+            repo,
+            repoRoot,
+            issue
+          });
+
+          logger.info("Advanced episode issue after merge", {
+            repo,
+            issueNumber: issue.issueNumber,
+            currentStage: result.currentStage,
+            activeAgentLabel: result.activeAgentLabel,
+            limit
+          });
+          results.push(result);
+        }
+
+        return {
+          status: "completed" as const,
+          results
+        };
+      }
+
       throw new Error(`The ${command} command requires --issue-number.`);
     }
 
@@ -310,7 +348,8 @@ export async function runPmAgentCli(
         repo,
         issueNumber,
         currentStage: result.currentStage,
-        activeAgentLabel: result.activeAgentLabel
+        activeAgentLabel: result.activeAgentLabel,
+        limit: 1
       });
 
       return result;
@@ -451,6 +490,42 @@ export async function runPmAgentCli(
   });
 
   return result;
+}
+
+function selectEpisodeIssuesForScheduledAdvance(
+  issues: EpisodeIssue[],
+  options: { limit: number }
+) {
+  return [...issues]
+    .filter((issue) => {
+      if (issue.state && issue.state !== "OPEN") return false;
+
+      const labels = new Set(issue.labels.map(normalizeLabelForScheduler));
+      if (labels.has("status:blocked")) return false;
+
+      return (
+        (labels.has("agent:research") && labels.has("status:researching")) ||
+        (labels.has("agent:writer") && labels.has("status:writing")) ||
+        (labels.has("agent:producer") && labels.has("status:producing"))
+      );
+    })
+    .sort((left, right) => left.issueNumber - right.issueNumber)
+    .slice(0, options.limit);
+}
+
+function parseLimitOption(value: string | boolean | undefined) {
+  if (value === undefined || value === false) return 1;
+  const limit = Number(value);
+
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new Error("--limit must be a positive integer.");
+  }
+
+  return limit;
+}
+
+function normalizeLabelForScheduler(label: string) {
+  return label.trim().toLowerCase().replace(/\s*:\s*/g, ":");
 }
 
 export async function auditEpisode(input: { repoRoot: string; issue: EpisodeIssue }) {

@@ -204,6 +204,76 @@ describe("research agent", () => {
     });
   });
 
+  it("supports --limit for scheduled pickup without selecting the same issue twice", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "research-agent-pickup-"));
+    const selectedIssues: number[] = [];
+    const loadCalls: number[][] = [];
+    const issues = [
+      {
+        number: 24,
+        title: "Episode: August 24, 2026",
+        state: "OPEN" as const,
+        labels: ["status:ready", "agent:research"]
+      },
+      {
+        number: 25,
+        title: "Episode: August 25, 2026",
+        state: "OPEN" as const,
+        labels: ["status:ready", "agent:research"]
+      }
+    ];
+
+    const result = await runResearchAgentCli(
+      [
+        "node",
+        "research-agent",
+        "pickup",
+        "--repo",
+        "joycytao/what-happened-on-this-day-podcast",
+        "--limit",
+        "2"
+      ],
+      {
+        repoRoot,
+        loadIssues: async () => {
+          const available = issues.filter((issue) => !selectedIssues.includes(issue.number));
+          loadCalls.push(available.map((issue) => issue.number));
+          return available;
+        },
+        loadIssue: async (issueNumber) => ({
+          issueNumber,
+          title: `Episode: ${issueNumber}`,
+          body: [
+            "date: 2026-08-24",
+            `episode_slug: issue-${issueNumber}`,
+            "language: en",
+            "audience: children-first-adult-friendly",
+            "duration_target_min: 5",
+            "duration_max_min: 8",
+            "current_stage: ready"
+          ].join("\n"),
+          labels: ["status:ready", "agent:research", "claim:research-agent"],
+          state: "OPEN" as const
+        }),
+        execFile: async () => "",
+        openPullRequest: async ({ issue }) => {
+          selectedIssues.push(issue.number);
+          return `https://github.com/joycytao/what-happened-on-this-day-podcast/pull/${issue.number}`;
+        },
+        commentOnIssue: async () => {}
+      }
+    );
+
+    expect(result).toMatchObject({
+      status: "completed",
+      results: [
+        { status: "completed", issue: { number: 24 } },
+        { status: "completed", issue: { number: 25 } }
+      ]
+    });
+    expect(loadCalls).toEqual([[24, 25], [25]]);
+  });
+
   it("requires --repo for the pickup CLI command", async () => {
     await expect(runResearchAgentCli(["node", "research-agent", "pickup"])).rejects.toThrow(
       "The pickup command requires --repo."

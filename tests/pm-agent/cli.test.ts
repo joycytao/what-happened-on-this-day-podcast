@@ -252,18 +252,173 @@ describe("pm agent cli", () => {
     ).rejects.toThrow("The audit-episode command requires --issue-number.");
 
     await expect(
-      runPmAgentCli(["node", "pm-agent", "advance-after-merge"], {
-        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
-        resolveRepo: async () => "joycytao/what-happened-on-this-day-podcast"
-      })
-    ).rejects.toThrow("The advance-after-merge command requires --issue-number.");
-
-    await expect(
       runPmAgentCli(["node", "pm-agent", "block-episode"], {
         resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
         resolveRepo: async () => "joycytao/what-happened-on-this-day-podcast"
       })
     ).rejects.toThrow("The block-episode command requires --issue-number.");
+  });
+
+  it("runs advance-after-merge as a scheduler command without an explicit issue number", async () => {
+    const logs: Array<{ message: string; meta?: Record<string, unknown> }> = [];
+    const advancedIssues: number[] = [];
+
+    const result = await runPmAgentCli(
+      [
+        "node",
+        "pm-agent",
+        "advance-after-merge",
+        "--repo",
+        "joycytao/what-happened-on-this-day-podcast"
+      ],
+      {
+        repoRoot: "/tmp/podcast-repo",
+        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+        loadEpisodeIssues: async () => [
+          {
+            issueNumber: 24,
+            title: "Episode: August 24, 2026",
+            body: "date: 2026-08-24\nepisode_slug: 2026-08-24-august-24-2026\ncurrent_stage: writing",
+            labels: ["status:writing", "agent:writer"],
+            state: "OPEN" as const
+          },
+          {
+            issueNumber: 25,
+            title: "Episode: August 25, 2026",
+            body: "date: 2026-08-25\nepisode_slug: 2026-08-25-august-25-2026\ncurrent_stage: ready",
+            labels: ["status:ready", "agent:research"],
+            state: "OPEN" as const
+          }
+        ],
+        advanceEpisodeAfterMerge: async ({ issue }: { issue: { issueNumber: number } }) => {
+          advancedIssues.push(issue.issueNumber);
+          return {
+            issueNumber: issue.issueNumber,
+            currentStage: "producing" as const,
+            activeAgentLabel: "agent:producer" as const
+          };
+        },
+        logger: {
+          info(message: string, meta?: Record<string, unknown>) {
+            logs.push({ message, meta });
+          },
+          warn() {},
+          error() {}
+        }
+      }
+    );
+
+    expect(result).toMatchObject({
+      status: "completed",
+      results: [
+        {
+          issueNumber: 24,
+          currentStage: "producing",
+          activeAgentLabel: "agent:producer"
+        }
+      ]
+    });
+    expect(advancedIssues).toEqual([24]);
+    expect(logs[0]).toMatchObject({
+      message: "Advanced episode issue after merge",
+      meta: {
+        issueNumber: 24,
+        limit: 1
+      }
+    });
+  });
+
+  it("supports --limit for scheduled advance-after-merge", async () => {
+    const advancedIssues: number[] = [];
+
+    const result = await runPmAgentCli(
+      [
+        "node",
+        "pm-agent",
+        "advance-after-merge",
+        "--repo",
+        "joycytao/what-happened-on-this-day-podcast",
+        "--limit",
+        "2"
+      ],
+      {
+        repoRoot: "/tmp/podcast-repo",
+        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+        loadEpisodeIssues: async () => [
+          {
+            issueNumber: 24,
+            title: "Episode: August 24, 2026",
+            body: "date: 2026-08-24\nepisode_slug: 2026-08-24-august-24-2026\ncurrent_stage: writing",
+            labels: ["status:writing", "agent:writer"],
+            state: "OPEN" as const
+          },
+          {
+            issueNumber: 25,
+            title: "Episode: August 25, 2026",
+            body: "date: 2026-08-25\nepisode_slug: 2026-08-25-august-25-2026\ncurrent_stage: producing",
+            labels: ["status:producing", "agent:producer"],
+            state: "OPEN" as const
+          }
+        ],
+        advanceEpisodeAfterMerge: async ({ issue }: { issue: { issueNumber: number } }) => {
+          advancedIssues.push(issue.issueNumber);
+          return {
+            issueNumber: issue.issueNumber,
+            currentStage: "review" as const,
+            activeAgentLabel: undefined
+          };
+        },
+        logger: {
+          info() {},
+          warn() {},
+          error() {}
+        }
+      }
+    );
+
+    expect(result).toMatchObject({
+      status: "completed",
+      results: [
+        { issueNumber: 24 },
+        { issueNumber: 25 }
+      ]
+    });
+    expect(advancedIssues).toEqual([24, 25]);
+  });
+
+  it("exits advance-after-merge cleanly when no active merged issue exists", async () => {
+    const result = await runPmAgentCli(
+      [
+        "node",
+        "pm-agent",
+        "advance-after-merge",
+        "--repo",
+        "joycytao/what-happened-on-this-day-podcast"
+      ],
+      {
+        repoRoot: "/tmp/podcast-repo",
+        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+        loadEpisodeIssues: async () => [
+          {
+            issueNumber: 24,
+            title: "Episode: August 24, 2026",
+            body: "date: 2026-08-24\nepisode_slug: 2026-08-24-august-24-2026\ncurrent_stage: review",
+            labels: ["status:review"],
+            state: "OPEN" as const
+          }
+        ],
+        logger: {
+          info() {},
+          warn() {},
+          error() {}
+        }
+      }
+    );
+
+    expect(result).toEqual({
+      status: "noop",
+      reason: "No episode issue was eligible for advance-after-merge."
+    });
   });
 
   it("triages a new feature request before creating work", async () => {
@@ -281,7 +436,7 @@ describe("pm agent cli", () => {
           mainBranchSignals: []
         }),
         logger: {
-          info(message, meta) {
+          info(message: string, meta?: Record<string, unknown>) {
             logs.push({ message, meta });
           },
           warn() {},
