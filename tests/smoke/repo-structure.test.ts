@@ -48,7 +48,8 @@ describe("repo foundation", () => {
 
     expect(packageJson.scripts).toMatchObject({
       "research-agent": "node --import tsx ./agents/research-agent/index.ts",
-      "writer-agent": "node --import tsx ./agents/writer-agent/index.ts"
+      "writer-agent": "node --import tsx ./agents/writer-agent/index.ts",
+      "producer-agent": "node --import tsx ./agents/producer-agent/index.ts"
     });
   });
 });

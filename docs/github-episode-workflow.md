@@ -269,6 +269,12 @@ Producer-agent owns audio production:
 
 Producer-agent must not move the issue to `status:review`.
 
+Scheduled command:
+
+```sh
+npm run producer-agent -- pickup --repo joycytao/what-happened-on-this-day-podcast
+```
+
 ### Human Reviewer
 
 The human reviewer reviews the final result at `status:review` and decides whether to move to `status:done` or reroute work.

@@ -2,7 +2,13 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { runProducerAgent, runProducerAgentFromTranscriptMarkdown } from "../../agents/producer-agent";
+import {
+  runProducerAgent,
+  runProducerAgentCli,
+  runProducerAgentFromTranscriptMarkdown,
+  runProducerAgentPickup
+} from "../../agents/producer-agent";
+import { evaluateTranscriptQuality } from "../../agents/writer-agent";
 import { extractProductionCues } from "../../agents/producer-agent/sfx-cues";
 import { resolveProductionCues } from "../../agents/producer-agent/sfx-resolver.js";
 import {
@@ -12,6 +18,7 @@ import {
   validateVoiceboxConfig,
   type VoiceboxConfig
 } from "../../agents/producer-agent/voicebox-adapter.js";
+import { serializeTranscriptMarkdown, type Transcript } from "../../src/contracts";
 
 describe("producer agent", () => {
   it("creates audio metadata from a transcript", async () => {
@@ -584,4 +591,278 @@ describe("producer agent", () => {
     });
     expect(metadata.voicebox.narrationText).toBe("Hello.\n\nThe story begins.\n\nGoodbye.");
   });
+
+  it("picks up a producer-routed issue and opens a PR without marking review", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "producer-agent-pickup-"));
+    const runDir = path.join(repoRoot, "runs", "2026-08-24-august-24-2026");
+    const calls: Array<{ file: string; args: string[] }> = [];
+    const comments: Array<{ issueNumber: number; body: string }> = [];
+
+    await writePassingWriterArtifacts(runDir);
+
+    const result = await runProducerAgentPickup({
+      repo: "joycytao/what-happened-on-this-day-podcast",
+      repoRoot,
+      loadIssues: async () => [
+        {
+          number: 24,
+          title: "Episode: August 24, 2026",
+          state: "OPEN" as const,
+          labels: ["status:producing", "agent:producer"]
+        }
+      ],
+      loadIssue: async () => ({
+        issueNumber: 24,
+        title: "Episode: August 24, 2026",
+        body: episodeIssueBody(),
+        labels: ["status:producing", "agent:producer", "claim:producer-agent"],
+        state: "OPEN" as const
+      }),
+      execFile: async (file, args) => {
+        calls.push({ file, args });
+        return "";
+      },
+      renderAudio: async ({ outputDir }) => {
+        await fs.mkdir(outputDir, { recursive: true });
+        const audioPath = path.join(outputDir, "final.mp3");
+        const metadataPath = path.join(outputDir, "render-metadata.json");
+        const sfxManifestPath = path.join(outputDir, "sfx-manifest.json");
+
+        await fs.writeFile(audioPath, new TextEncoder().encode("ID3producer mp3 bytes"));
+        await fs.writeFile(
+          metadataPath,
+          `${JSON.stringify({ voicebox: { mode: "production", status: "succeeded" } }, null, 2)}\n`,
+          "utf8"
+        );
+        await fs.writeFile(
+          sfxManifestPath,
+          `${JSON.stringify({ cueCount: 2, cues: [] }, null, 2)}\n`,
+          "utf8"
+        );
+
+        return { audioPath, metadataPath, sfxManifestPath };
+      },
+      openPullRequest: async () => "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/52",
+      commentOnIssue: async (comment) => {
+        comments.push(comment);
+      }
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.issue?.number).toBe(24);
+    expect(result.runDir).toBe(runDir);
+    expect(result.prUrl).toBe("https://github.com/joycytao/what-happened-on-this-day-podcast/pull/52");
+    expect(result.artifactPaths).toEqual([
+      path.join(runDir, "audio", "final.mp3"),
+      path.join(runDir, "audio", "render-metadata.json"),
+      path.join(runDir, "audio", "sfx-manifest.json")
+    ]);
+    expect(calls).toEqual([
+      {
+        file: "gh",
+        args: [
+          "issue",
+          "edit",
+          "24",
+          "--repo",
+          "joycytao/what-happened-on-this-day-podcast",
+          "--add-label",
+          "claim:producer-agent"
+        ]
+      }
+    ]);
+    expect(calls.flatMap((call) => call.args)).not.toContain("status:review");
+    expect(comments).toHaveLength(1);
+    expect(comments[0]?.body).toContain("PR: https://github.com/joycytao/what-happened-on-this-day-podcast/pull/52");
+    expect(comments[0]?.body).toContain("audio/final.mp3");
+    expect(comments[0]?.body).toContain("audio/render-metadata.json");
+    expect(comments[0]?.body).toContain("audio/sfx-manifest.json");
+  });
+
+  it("blocks producer pickup before claiming when transcript.md is missing", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "producer-agent-pickup-"));
+    const calls: Array<{ file: string; args: string[] }> = [];
+
+    await fs.mkdir(path.join(repoRoot, "runs", "2026-08-24-august-24-2026"), { recursive: true });
+
+    await expect(
+      runProducerAgentPickup({
+        repo: "joycytao/what-happened-on-this-day-podcast",
+        repoRoot,
+        loadIssues: async () => [
+          {
+            number: 24,
+            title: "Episode: August 24, 2026",
+            state: "OPEN" as const,
+            labels: ["status:producing", "agent:producer"]
+          }
+        ],
+        loadIssue: async () => ({
+          issueNumber: 24,
+          title: "Episode: August 24, 2026",
+          body: episodeIssueBody(),
+          labels: ["status:producing", "agent:producer", "claim:producer-agent"],
+          state: "OPEN" as const
+        }),
+        execFile: async (file, args) => {
+          calls.push({ file, args });
+          return "";
+        }
+      })
+    ).rejects.toThrow(/transcript\.md/);
+    expect(calls).toEqual([]);
+  });
+
+  it("blocks producer completion when rendered audio is not reviewable", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "producer-agent-pickup-"));
+    const runDir = path.join(repoRoot, "runs", "2026-08-24-august-24-2026");
+
+    await writePassingWriterArtifacts(runDir);
+
+    await expect(
+      runProducerAgentPickup({
+        repo: "joycytao/what-happened-on-this-day-podcast",
+        repoRoot,
+        loadIssues: async () => [
+          {
+            number: 24,
+            title: "Episode: August 24, 2026",
+            state: "OPEN" as const,
+            labels: ["status:producing", "agent:producer"]
+          }
+        ],
+        loadIssue: async () => ({
+          issueNumber: 24,
+          title: "Episode: August 24, 2026",
+          body: episodeIssueBody(),
+          labels: ["status:producing", "agent:producer", "claim:producer-agent"],
+          state: "OPEN" as const
+        }),
+        execFile: async () => "",
+        renderAudio: async ({ outputDir }) => {
+          await fs.mkdir(outputDir, { recursive: true });
+          const audioPath = path.join(outputDir, "final.mp3");
+          const metadataPath = path.join(outputDir, "render-metadata.json");
+          const sfxManifestPath = path.join(outputDir, "sfx-manifest.json");
+
+          await fs.writeFile(audioPath, "MIXED_AUDIO_STUB", "utf8");
+          await fs.writeFile(
+            metadataPath,
+            `${JSON.stringify({ voicebox: { mode: "dry-run", status: "succeeded" } }, null, 2)}\n`,
+            "utf8"
+          );
+          await fs.writeFile(sfxManifestPath, `${JSON.stringify({ cueCount: 0 }, null, 2)}\n`, "utf8");
+
+          return { audioPath, metadataPath, sfxManifestPath };
+        }
+      })
+    ).rejects.toThrow(/Episode audio is not reviewable/);
+  });
+
+  it("exits cleanly when no producer-routed issue exists", async () => {
+    const result = await runProducerAgentPickup({
+      repo: "joycytao/what-happened-on-this-day-podcast",
+      repoRoot: await fs.mkdtemp(path.join(os.tmpdir(), "producer-agent-pickup-")),
+      loadIssues: async () => [
+        {
+          number: 25,
+          title: "Writer work",
+          state: "OPEN" as const,
+          labels: ["status:writing", "agent:writer"]
+        }
+      ]
+    });
+
+    expect(result).toEqual({
+      status: "noop",
+      reason: "No issue was found for agent:producer."
+    });
+  });
+
+  it("exposes a pickup CLI command for scheduled producer runners", async () => {
+    const result = await runProducerAgentCli(
+      [
+        "node",
+        "producer-agent",
+        "pickup",
+        "--repo",
+        "joycytao/what-happened-on-this-day-podcast"
+      ],
+      {
+        repoRoot: await fs.mkdtemp(path.join(os.tmpdir(), "producer-agent-pickup-")),
+        loadIssues: async () => []
+      }
+    );
+
+    expect(result).toEqual({
+      status: "noop",
+      reason: "No issue was found for agent:producer."
+    });
+  });
+
+  it("requires --repo for the producer pickup CLI command", async () => {
+    await expect(runProducerAgentCli(["node", "producer-agent", "pickup"])).rejects.toThrow(
+      "The pickup command requires --repo."
+    );
+  });
 });
+
+async function writePassingWriterArtifacts(runDir: string) {
+  const transcript = passingTranscript();
+
+  await fs.mkdir(runDir, { recursive: true });
+  await fs.writeFile(path.join(runDir, "transcript.md"), serializeTranscriptMarkdown(transcript), "utf8");
+  await fs.writeFile(path.join(runDir, "transcript.json"), `${JSON.stringify(transcript, null, 2)}\n`, "utf8");
+  await fs.writeFile(
+    path.join(runDir, "transcript-quality-report.json"),
+    `${JSON.stringify(evaluateTranscriptQuality(transcript), null, 2)}\n`,
+    "utf8"
+  );
+}
+
+function episodeIssueBody() {
+  return [
+    "date: 2026-08-24",
+    "episode_slug: 2026-08-24-august-24-2026",
+    "language: en",
+    "audience: children-first-adult-friendly",
+    "duration_target_min: 5",
+    "duration_max_min: 8",
+    "current_stage: producing",
+    "output_run_path: runs/2026-08-24-august-24-2026"
+  ].join("\n");
+}
+
+function passingTranscript(): Transcript {
+  return {
+    opening: [
+      "Good morning, time traveler. [SFX: time machine hum, 2s]",
+      "You are stepping into a day when computers began to feel friendlier for your family."
+    ].join("\n"),
+    segments: [
+      {
+        heading: "Time Machine Hook",
+        body: "You see a glowing Start button. [Action: tap your desk twice] What would you click first? [SFX: soft click]"
+      },
+      {
+        heading: "Narrative Drama",
+        body: "You wait outside a store with other curious families. Your eyes spot boxes of Windows 95. [BGM: curious light pulse]"
+      },
+      {
+        heading: "Scientific Deep-Dive",
+        body: "You learn that an interface is like a school hallway for your computer. It helps you find rooms, tools, and files. [SFX: clock tick]"
+      },
+      {
+        heading: "Modern World Twist",
+        body: "Your tablet and laptop still use ideas like buttons and menus. Can you find one on your screen right now? [Action: point to a menu]"
+      },
+      {
+        heading: "Outro & Mission",
+        body: "You return home with a mission: ask your grown-up what their first computer looked like. [SFX: soft bell chime]"
+      }
+    ],
+    closing: "You made it back to today, and your next click has a history. You can notice design choices everywhere now.",
+    estimatedDurationMin: 5,
+    ttsNotes: ["Pronunciation: Microsoft as MY-kroh-soft; Windows 95 as Windows ninety-five."]
+  };
+}
