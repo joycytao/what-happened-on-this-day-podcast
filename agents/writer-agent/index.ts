@@ -184,12 +184,81 @@ export async function runWriterAgentCli(
     throw new Error("The pickup command requires --repo.");
   }
 
-  return runWriterAgentPickup({
+  const limit = parseLimitOption(options.limit);
+  const pickupInput = {
     ...dependencies,
     repo: options.repo,
     repoRoot: dependencies.repoRoot ?? process.cwd(),
     issueNumber: typeof options["issue-number"] === "string" ? Number(options["issue-number"]) : undefined
+  };
+
+  if (limit > 1 && typeof pickupInput.issueNumber !== "number") {
+    return runWriterAgentScheduledPickup({
+      ...pickupInput,
+      limit
+    });
+  }
+
+  return runWriterAgentPickup({
+    ...pickupInput
   });
+}
+
+async function runWriterAgentScheduledPickup(input: Parameters<typeof runWriterAgentPickup>[0] & {
+  limit: number;
+}): Promise<
+  | {
+      status: "completed";
+      results: WriterPickupResult[];
+    }
+  | {
+      status: "noop";
+      reason: string;
+    }
+> {
+  const processedIssueNumbers = new Set<number>();
+  const results: WriterPickupResult[] = [];
+  const loadIssues =
+    input.loadIssues ??
+    (() => loadOpenIssueQueueIssues({ repo: input.repo, execFile: input.execFile }));
+
+  for (let index = 0; index < input.limit; index += 1) {
+    const result = await runWriterAgentPickup({
+      ...input,
+      loadIssues: async () =>
+        (await loadIssues()).filter((issue: IssueQueueIssue) => !processedIssueNumbers.has(issue.number))
+    });
+
+    if (result.status === "noop") {
+      break;
+    }
+
+    processedIssueNumbers.add(result.issue.number);
+    results.push(result);
+  }
+
+  if (results.length === 0) {
+    return {
+      status: "noop",
+      reason: "No issue was found for agent:writer."
+    };
+  }
+
+  return {
+    status: "completed",
+    results
+  };
+}
+
+function parseLimitOption(value: string | boolean | undefined) {
+  if (value === undefined || value === false) return 1;
+  const limit = Number(value);
+
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new Error("--limit must be a positive integer.");
+  }
+
+  return limit;
 }
 
 export async function writeTranscriptArtifact(transcript: Transcript, runDir: string) {

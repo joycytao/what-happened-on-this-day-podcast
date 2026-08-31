@@ -186,12 +186,81 @@ export async function runResearchAgentCli(
     throw new Error("The pickup command requires --repo.");
   }
 
-  return runResearchAgentPickup({
+  const limit = parseLimitOption(options.limit);
+  const pickupInput = {
     ...dependencies,
     repo: options.repo,
     repoRoot: dependencies.repoRoot ?? process.cwd(),
-    issueNumber: typeof options["issue-number"] === "string" ? Number(options["issue-number"]) : undefined,
+    issueNumber: typeof options["issue-number"] === "string" ? Number(options["issue-number"]) : undefined
+  };
+
+  if (limit > 1 && typeof pickupInput.issueNumber !== "number") {
+    return runResearchAgentScheduledPickup({
+      ...pickupInput,
+      limit
+    });
+  }
+
+  return runResearchAgentPickup({
+    ...pickupInput
   });
+}
+
+async function runResearchAgentScheduledPickup(input: Parameters<typeof runResearchAgentPickup>[0] & {
+  limit: number;
+}): Promise<
+  | {
+      status: "completed";
+      results: ResearchPickupResult[];
+    }
+  | {
+      status: "noop";
+      reason: string;
+    }
+> {
+  const processedIssueNumbers = new Set<number>();
+  const results: ResearchPickupResult[] = [];
+  const loadIssues =
+    input.loadIssues ??
+    (() => loadOpenIssueQueueIssues({ repo: input.repo, execFile: input.execFile }));
+
+  for (let index = 0; index < input.limit; index += 1) {
+    const result = await runResearchAgentPickup({
+      ...input,
+      loadIssues: async () =>
+        (await loadIssues()).filter((issue: IssueQueueIssue) => !processedIssueNumbers.has(issue.number))
+    });
+
+    if (result.status === "noop") {
+      break;
+    }
+
+    processedIssueNumbers.add(result.issue.number);
+    results.push(result);
+  }
+
+  if (results.length === 0) {
+    return {
+      status: "noop",
+      reason: "No issue was found for agent:research."
+    };
+  }
+
+  return {
+    status: "completed",
+    results
+  };
+}
+
+function parseLimitOption(value: string | boolean | undefined) {
+  if (value === undefined || value === false) return 1;
+  const limit = Number(value);
+
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new Error("--limit must be a positive integer.");
+  }
+
+  return limit;
 }
 
 async function persistResearchArtifacts(dossier: ResearchDossier, runDir: string) {
