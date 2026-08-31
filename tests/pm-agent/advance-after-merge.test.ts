@@ -163,6 +163,46 @@ describe("pm advance-after-merge gates", () => {
     expect(comments[0]?.body).toContain("Gate: writer artifacts");
     expect(comments[0]?.body).toContain("transcript.md");
   });
+
+  it("blocks the issue when merged producer audio is a dry-run artifact", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pm-advance-"));
+    const runDir = path.join(repoRoot, "runs", "2026-08-24-august-24-2026");
+    const comments: Array<{ issueNumber: number; body: string }> = [];
+    const updates: Array<EpisodeIssueContextUpdates & { nextAgentLabel?: EpisodeAgentLabel }> = [];
+
+    await writeDryRunAudio(runDir);
+
+    await expect(
+      advanceEpisodeAfterMerge(
+        {
+          repo: "joycytao/what-happened-on-this-day-podcast",
+          repoRoot,
+          issue: episodeIssue(["status:producing", "agent:producer", "claim:producer-agent"])
+        },
+        {
+          updateEpisodeIssueStage: async (_issue, update) => {
+            updates.push(update);
+            return episodeIssue(["status:blocked", "agent:producer"]);
+          },
+          commentOnIssue: async (comment) => {
+            comments.push(comment);
+          }
+        }
+      )
+    ).rejects.toThrow(/Episode audio is not reviewable/);
+
+    expect(updates).toEqual([
+      {
+        currentStage: "blocked",
+        outputRunPath: "runs/2026-08-24-august-24-2026",
+        nextAgentLabel: "agent:producer"
+      }
+    ]);
+    expect(comments[0]?.body).toContain("## PM gate failed");
+    expect(comments[0]?.body).toContain("Gate: producer audio");
+    expect(comments[0]?.body).toContain("Next status: status:blocked");
+    expect(comments[0]?.body).not.toContain("Next status: status:review");
+  });
 });
 
 async function writeResearchArtifacts(runDir: string) {
@@ -193,6 +233,18 @@ async function writeReviewableAudio(runDir: string) {
   await fs.writeFile(
     path.join(audioDir, "render-metadata.json"),
     `${JSON.stringify({ voicebox: { mode: "production", status: "succeeded" } }, null, 2)}\n`,
+    "utf8"
+  );
+}
+
+async function writeDryRunAudio(runDir: string) {
+  const audioDir = path.join(runDir, "audio");
+
+  await fs.mkdir(audioDir, { recursive: true });
+  await fs.writeFile(path.join(audioDir, "final.mp3"), "MIXED_AUDIO_STUB", "utf8");
+  await fs.writeFile(
+    path.join(audioDir, "render-metadata.json"),
+    `${JSON.stringify({ voicebox: { mode: "dry-run", status: "succeeded" } }, null, 2)}\n`,
     "utf8"
   );
 }

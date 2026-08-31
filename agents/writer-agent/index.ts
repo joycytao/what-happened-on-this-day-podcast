@@ -19,6 +19,7 @@ import {
   resolveEpisodeRequest,
   type EpisodeIssue
 } from "../pm-agent/github-issue";
+import { recordAgentFailure } from "../failure-routing.js";
 import { buildTranscript } from "./build-transcript";
 import type { Transcript } from "../../src/contracts";
 
@@ -119,40 +120,54 @@ export async function runWriterAgentPickup(input: {
     reloadIssue: async () => episodeIssueToQueueIssue(await loadIssue(issue.number))
   });
 
-  await runWriterAgentFromRunDir(runDir);
+  try {
+    await runWriterAgentFromRunDir(runDir);
 
-  const artifactPaths = [
-    path.join(runDir, "transcript.md"),
-    path.join(runDir, "transcript.json"),
-    path.join(runDir, "transcript-quality-report.json")
-  ];
-  const qualityReport = JSON.parse(await fs.readFile(path.join(runDir, "transcript-quality-report.json"), "utf8")) as {
-    status?: string;
-  };
-  const prUrl = await (input.openPullRequest ?? openWriterPullRequest)({
-    issue,
-    runDir,
-    repo: input.repo,
-    repoRoot: input.repoRoot
-  });
-
-  await (input.commentOnIssue ?? defaultCommentOnIssue(input.repo))({
-    issueNumber: issue.number,
-    body: buildWriterPickupComment({
-      prUrl,
+    const artifactPaths = [
+      path.join(runDir, "transcript.md"),
+      path.join(runDir, "transcript.json"),
+      path.join(runDir, "transcript-quality-report.json")
+    ];
+    const qualityReport = JSON.parse(await fs.readFile(path.join(runDir, "transcript-quality-report.json"), "utf8")) as {
+      status?: string;
+    };
+    const prUrl = await (input.openPullRequest ?? openWriterPullRequest)({
+      issue,
       runDir,
-      qualityStatus: qualityReport.status ?? "unknown",
-      artifactPaths
-    })
-  });
+      repo: input.repo,
+      repoRoot: input.repoRoot
+    });
 
-  return {
-    status: "completed",
-    issue,
-    runDir,
-    prUrl,
-    artifactPaths
-  };
+    await (input.commentOnIssue ?? defaultCommentOnIssue(input.repo))({
+      issueNumber: issue.number,
+      body: buildWriterPickupComment({
+        prUrl,
+        runDir,
+        qualityStatus: qualityReport.status ?? "unknown",
+        artifactPaths
+      })
+    });
+
+    return {
+      status: "completed",
+      issue,
+      runDir,
+      prUrl,
+      artifactPaths
+    };
+  } catch (error) {
+    await recordAgentFailure({
+      repo: input.repo,
+      issue: claimedIssue,
+      agentName: "writer-agent",
+      gateName: "writer artifacts",
+      reason: error instanceof Error ? error.message : String(error),
+      nextStatusLabel: "status:writing",
+      execFile
+    });
+
+    throw error;
+  }
 }
 
 export async function runWriterAgentCli(

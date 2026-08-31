@@ -26,6 +26,7 @@ import {
   assertWriterTranscriptArtifact,
   assertWriterTranscriptQuality
 } from "../pm-agent";
+import { recordAgentFailure } from "../failure-routing.js";
 
 const execFileAsync = promisify(execFileCallback);
 
@@ -131,43 +132,58 @@ export async function runProducerAgentPickup(input: {
     execFile,
     reloadIssue: async () => episodeIssueToQueueIssue(await loadIssue(issue.number))
   });
-  const outputDir = path.join(runDir, "audio");
-  const result = await (input.renderAudio ?? defaultRenderAudio)({
-    transcriptPath: path.join(runDir, "transcript.md"),
-    outputDir,
-    runDir
-  });
+  try {
+    const outputDir = path.join(runDir, "audio");
+    const result = await (input.renderAudio ?? defaultRenderAudio)({
+      transcriptPath: path.join(runDir, "transcript.md"),
+      outputDir,
+      runDir
+    });
 
-  await assertReviewableEpisodeAudio(result);
+    await assertReviewableEpisodeAudio(result);
 
-  const artifactPaths = [
-    path.join(runDir, "audio", "final.mp3"),
-    path.join(runDir, "audio", "render-metadata.json"),
-    path.join(runDir, "audio", "sfx-manifest.json")
-  ];
-  const prUrl = await (input.openPullRequest ?? openProducerPullRequest)({
-    issue,
-    runDir,
-    repo: input.repo,
-    repoRoot: input.repoRoot
-  });
-
-  await (input.commentOnIssue ?? defaultCommentOnIssue(input.repo))({
-    issueNumber: issue.number,
-    body: buildProducerPickupComment({
-      prUrl,
+    const artifactPaths = [
+      path.join(runDir, "audio", "final.mp3"),
+      path.join(runDir, "audio", "render-metadata.json"),
+      path.join(runDir, "audio", "sfx-manifest.json")
+    ];
+    const prUrl = await (input.openPullRequest ?? openProducerPullRequest)({
+      issue,
       runDir,
-      artifactPaths
-    })
-  });
+      repo: input.repo,
+      repoRoot: input.repoRoot
+    });
 
-  return {
-    status: "completed",
-    issue: claimedIssue,
-    runDir,
-    prUrl,
-    artifactPaths
-  };
+    await (input.commentOnIssue ?? defaultCommentOnIssue(input.repo))({
+      issueNumber: issue.number,
+      body: buildProducerPickupComment({
+        prUrl,
+        runDir,
+        artifactPaths
+      })
+    });
+
+    return {
+      status: "completed",
+      issue: claimedIssue,
+      runDir,
+      prUrl,
+      artifactPaths
+    };
+  } catch (error) {
+    await recordAgentFailure({
+      repo: input.repo,
+      issue: claimedIssue,
+      agentName: "producer-agent",
+      gateName: "producer audio",
+      reason: error instanceof Error ? error.message : String(error),
+      nextStatusLabel: "status:blocked",
+      updateStatus: true,
+      execFile
+    });
+
+    throw error;
+  }
 }
 
 export async function runProducerAgentCli(

@@ -330,6 +330,67 @@ describe("writer agent", () => {
     expect(labelUpdates.flat()).not.toContain("status:producing");
   });
 
+  it("records a retryable writer failure without changing status:writing", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "writer-agent-pickup-"));
+    const runDir = path.join(repoRoot, "runs", "2026-08-24-august-24-2026");
+    const calls: Array<{ file: string; args: string[] }> = [];
+
+    await fs.mkdir(runDir, { recursive: true });
+    await fs.writeFile(path.join(runDir, "research-dossier.json"), windows95DossierJson(), "utf8");
+
+    await expect(
+      runWriterAgentPickup({
+        repo: "joycytao/what-happened-on-this-day-podcast",
+        repoRoot,
+        loadIssues: async () => [
+          {
+            number: 24,
+            title: "Episode: August 24, 2026",
+            state: "OPEN" as const,
+            labels: ["status:writing", "agent:writer"]
+          }
+        ],
+        loadIssue: async () => ({
+          issueNumber: 24,
+          title: "Episode: August 24, 2026",
+          body: [
+            "date: 2026-08-24",
+            "episode_slug: 2026-08-24-august-24-2026",
+            "language: en",
+            "audience: children-first-adult-friendly",
+            "duration_target_min: 5",
+            "duration_max_min: 8",
+            "current_stage: writing",
+            "output_run_path: runs/2026-08-24-august-24-2026"
+          ].join("\n"),
+          labels: ["status:writing", "agent:writer", "claim:writer-agent"],
+          state: "OPEN" as const
+        }),
+        execFile: async (file, args) => {
+          calls.push({ file, args });
+          return "";
+        },
+        openPullRequest: async () => {
+          throw new Error("git push failed");
+        }
+      })
+    ).rejects.toThrow("git push failed");
+
+    expect(calls[0]?.args).toContain("claim:writer-agent");
+    expect(calls[1]?.file).toBe("gh");
+    expect(calls[1]?.args.slice(0, 5)).toEqual([
+      "issue",
+      "comment",
+      "24",
+      "--repo",
+      "joycytao/what-happened-on-this-day-podcast"
+    ]);
+    expect(calls[1]?.args.join("\n")).toContain("## Agent failure");
+    expect(calls[1]?.args.join("\n")).toContain("Responsible agent: writer-agent");
+    expect(calls[1]?.args.join("\n")).toContain("Next status: status:writing");
+    expect(calls.flatMap((call) => call.args)).not.toContain("status:blocked");
+  });
+
   it("exposes a pickup CLI command for scheduled runners", async () => {
     const result = await runWriterAgentCli(
       [
