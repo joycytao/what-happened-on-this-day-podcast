@@ -67,6 +67,21 @@ describe("shared issue queue utilities", () => {
     ).toThrow("No issue was found for agent:research");
   });
 
+  it("does not pick up blocked issues for scheduled role agents", () => {
+    expect(() =>
+      selectIssueForAgent(
+        [
+          issue({
+            number: 26,
+            title: "blocked research issue",
+            labels: ["status:blocked", "agent:research"]
+          })
+        ],
+        { role: "research", allowedStatuses: ["status:ready", "status:researching"] }
+      )
+    ).toThrow("No issue was found for agent:research");
+  });
+
   it("fails validation when an issue has multiple status labels", () => {
     expect(() =>
       validateIssueQueueLabels(

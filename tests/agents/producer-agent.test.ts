@@ -716,6 +716,7 @@ describe("producer agent", () => {
   it("blocks producer completion when rendered audio is not reviewable", async () => {
     const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "producer-agent-pickup-"));
     const runDir = path.join(repoRoot, "runs", "2026-08-24-august-24-2026");
+    const calls: Array<{ file: string; args: string[] }> = [];
 
     await writePassingWriterArtifacts(runDir);
 
@@ -738,7 +739,10 @@ describe("producer agent", () => {
           labels: ["status:producing", "agent:producer", "claim:producer-agent"],
           state: "OPEN" as const
         }),
-        execFile: async () => "",
+        execFile: async (file, args) => {
+          calls.push({ file, args });
+          return "";
+        },
         renderAudio: async ({ outputDir }) => {
           await fs.mkdir(outputDir, { recursive: true });
           const audioPath = path.join(outputDir, "final.mp3");
@@ -757,6 +761,32 @@ describe("producer agent", () => {
         }
       })
     ).rejects.toThrow(/Episode audio is not reviewable/);
+    expect(calls[0]?.args).toContain("claim:producer-agent");
+    expect(calls[1]).toMatchObject({
+      file: "gh",
+      args: [
+        "issue",
+        "edit",
+        "24",
+        "--repo",
+        "joycytao/what-happened-on-this-day-podcast",
+        "--remove-label",
+        "status:producing",
+        "--add-label",
+        "status:blocked"
+      ]
+    });
+    expect(calls[2]?.file).toBe("gh");
+    expect(calls[2]?.args.slice(0, 5)).toEqual([
+      "issue",
+      "comment",
+      "24",
+      "--repo",
+      "joycytao/what-happened-on-this-day-podcast"
+    ]);
+    expect(calls[2]?.args.join("\n")).toContain("Responsible agent: producer-agent");
+    expect(calls[2]?.args.join("\n")).toContain("Next status: status:blocked");
+    expect(calls.flatMap((call) => call.args)).not.toContain("status:review");
   });
 
   it("exits cleanly when no producer-routed issue exists", async () => {

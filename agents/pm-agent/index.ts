@@ -559,12 +559,19 @@ export async function advanceEpisodeAfterMerge(input: {
         issue: input.issue,
         gateName: "producer audio",
         nextStatusLabel: "status:review",
+        failureStatusLabel: "status:blocked",
         validate: () =>
           assertReviewableEpisodeAudio({
             audioPath: path.join(audit.runDir, "audio", "final.mp3"),
             metadataPath: path.join(audit.runDir, "audio", "render-metadata.json")
           }),
         update: () => updateEpisodeIssueStage(input.issue, updates),
+        updateFailure: () =>
+          updateEpisodeIssueStage(input.issue, {
+            currentStage: "blocked",
+            outputRunPath: audit.outputRunPath,
+            nextAgentLabel: "agent:producer"
+          }),
         commentOnIssue
       }
     );
@@ -584,18 +591,25 @@ async function runPmGate(input: {
   gateName: string;
   nextStatusLabel: string;
   nextAgentLabel?: EpisodeAgentLabel;
+  failureStatusLabel?: string;
   validate: () => Promise<unknown>;
   update: () => Promise<EpisodeIssue>;
+  updateFailure?: () => Promise<EpisodeIssue>;
   commentOnIssue: (input: { issueNumber: number; body: string }) => Promise<void>;
 }) {
   try {
     await input.validate();
   } catch (error) {
+    if (input.updateFailure) {
+      await input.updateFailure();
+    }
+
     await input.commentOnIssue({
       issueNumber: input.issue.issueNumber,
       body: buildPmGateFailedComment({
         gateName: input.gateName,
-        reason: error instanceof Error ? error.message : String(error)
+        reason: error instanceof Error ? error.message : String(error),
+        nextStatusLabel: input.failureStatusLabel
       })
     });
     throw error;
@@ -632,12 +646,14 @@ function buildPmGatePassedComment(input: {
 function buildPmGateFailedComment(input: {
   gateName: string;
   reason: string;
+  nextStatusLabel?: string;
 }) {
   return [
     "## PM gate failed",
     "",
     `Gate: ${input.gateName}`,
     `Reason: ${input.reason}`,
+    ...(input.nextStatusLabel ? [`Next status: ${input.nextStatusLabel}`] : []),
     "Next action: fix the missing or invalid merged artifact, then rerun PM advance-after-merge."
   ].join("\n");
 }
