@@ -5,7 +5,12 @@ import path from "node:path";
 import { advanceEpisodeAfterMerge } from "../../agents/pm-agent";
 import { evaluateTranscriptQuality } from "../../agents/writer-agent";
 import { serializeTranscriptMarkdown, type Transcript } from "../../src/contracts";
-import type { EpisodeIssue, EpisodeIssueContextUpdates, EpisodeAgentLabel } from "../../agents/pm-agent/github-issue";
+import {
+  updateEpisodeIssueStageOnGitHub,
+  type EpisodeIssue,
+  type EpisodeIssueContextUpdates,
+  type EpisodeAgentLabel
+} from "../../agents/pm-agent/github-issue";
 
 describe("pm advance-after-merge gates", () => {
   it("advances merged research artifacts to writer and comments the passed gate", async () => {
@@ -203,6 +208,41 @@ describe("pm advance-after-merge gates", () => {
     expect(comments[0]?.body).toContain("Next status: status:blocked");
     expect(comments[0]?.body).not.toContain("Next status: status:review");
   });
+
+  it("reopens an auto-closed episode issue before handing it downstream", async () => {
+    const calls: Array<{ file: string; args: string[] }> = [];
+
+    await updateEpisodeIssueStageOnGitHub(
+      episodeIssue(["status:ready", "agent:research", "claim:research-agent"], [], "CLOSED"),
+      {
+        currentStage: "writing",
+        outputRunPath: "runs/2026-08-24-august-24-2026",
+        nextAgentLabel: "agent:writer"
+      },
+      {
+        repo: "joycytao/what-happened-on-this-day-podcast",
+        execFile: async (file, args) => {
+          calls.push({ file, args });
+          return "https://github.com/joycytao/what-happened-on-this-day-podcast/issues/24";
+        }
+      }
+    );
+
+    expect(calls[0]).toEqual({
+      file: "gh",
+      args: [
+        "issue",
+        "reopen",
+        "24",
+        "--repo",
+        "joycytao/what-happened-on-this-day-podcast"
+      ]
+    });
+    expect(calls[1]?.args).toContain("edit");
+    expect(calls[1]?.args).toContain("--add-label");
+    expect(calls[1]?.args).toContain("status:writing");
+    expect(calls[1]?.args).toContain("agent:writer");
+  });
 });
 
 async function writeResearchArtifacts(runDir: string) {
@@ -249,7 +289,7 @@ async function writeDryRunAudio(runDir: string) {
   );
 }
 
-function episodeIssue(labels: string[], extraBodyLines: string[] = []): EpisodeIssue {
+function episodeIssue(labels: string[], extraBodyLines: string[] = [], state: "OPEN" | "CLOSED" = "OPEN"): EpisodeIssue {
   return {
     issueNumber: 24,
     title: "Episode: August 24, 2026",
@@ -265,7 +305,7 @@ function episodeIssue(labels: string[], extraBodyLines: string[] = []): EpisodeI
       ...extraBodyLines
     ].join("\n"),
     labels,
-    state: "OPEN"
+    state
   };
 }
 
