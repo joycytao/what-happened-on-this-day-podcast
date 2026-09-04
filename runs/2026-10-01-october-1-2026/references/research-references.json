@@ -1,0 +1,24 @@
+{
+  "episodeDate": "2026-10-01",
+  "chosenSubject": "NASA begins operations",
+  "items": [
+    {
+      "id": "ref-1",
+      "summary": "NASA: 65 Years Ago: NASA Begins Operations (https://www.nasa.gov/history/65-years-ago-nasa-begins-operations/) states that NASA officially began operations on October 1, 1958. The source explains that President Dwight D. Eisenhower signed the National Aeronautics and Space Act in July 1958, creating NASA to lead the United States' civilian space program. It also says NASA incorporated the earlier National Advisory Committee for Aeronautics and began work on human spaceflight within days of opening.",
+      "source": {
+        "title": "NASA: 65 Years Ago: NASA Begins Operations",
+        "url": "https://www.nasa.gov/history/65-years-ago-nasa-begins-operations/",
+        "sourceType": "official"
+      }
+    },
+    {
+      "id": "ref-2",
+      "summary": "NASA: NASA's Origins (https://www.nasa.gov/image-article/nasas-origins/) says NASA was created on October 1, 1958 to perform civilian research related to space flight and aeronautics. The source identifies T. Keith Glennan as NASA's first administrator and Hugh L. Dryden as deputy administrator, and it notes that NASA was based on its predecessor, the National Advisory Committee for Aeronautics.",
+      "source": {
+        "title": "NASA: NASA's Origins",
+        "url": "https://www.nasa.gov/image-article/nasas-origins/",
+        "sourceType": "official"
+      }
+    }
+  ]
+}

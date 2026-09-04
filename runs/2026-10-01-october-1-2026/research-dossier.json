@@ -1,0 +1,31 @@
+{
+  "episodeDate": "2026-10-01",
+  "chosenSubject": "NASA begins operations",
+  "entityType": "event",
+  "chosenAngle": "How a new civilian space agency turned a tense space race moment into organized exploration, science, and engineering",
+  "episodeThesis": "A public science agency can turn a big national challenge into missions that help people learn more about Earth, flight, and space.",
+  "timeline": [
+    "July 29, 1958: President Dwight D. Eisenhower signs the National Aeronautics and Space Act",
+    "August 19, 1958: T. Keith Glennan and Hugh L. Dryden are sworn in as NASA's first administrator and deputy administrator",
+    "October 1, 1958: NASA officially begins operations as the United States' civilian space agency"
+  ],
+  "storyBeats": [
+    "A new agency opens for business while people are watching the space race closely",
+    "NASA brings together earlier aeronautics work from NACA with new space responsibilities",
+    "The first days of NASA show how exploration depends on teams, planning, and careful engineering"
+  ],
+  "modernRelevance": "Modern weather satellites, space telescopes, planetary probes, aviation research, and human spaceflight still depend on the kind of organized civilian science mission NASA began on October 1, 1958.",
+  "sources": [
+    {
+      "title": "NASA: 65 Years Ago: NASA Begins Operations",
+      "url": "https://www.nasa.gov/history/65-years-ago-nasa-begins-operations/",
+      "sourceType": "official"
+    },
+    {
+      "title": "NASA: NASA's Origins",
+      "url": "https://www.nasa.gov/image-article/nasas-origins/",
+      "sourceType": "official"
+    }
+  ],
+  "safetyNotes": []
+}
