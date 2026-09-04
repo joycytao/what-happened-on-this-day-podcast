@@ -1,0 +1,38 @@
+{
+  "episodeDate": "2026-10-01",
+  "chosenSubject": "Ford Model T goes on sale",
+  "entityType": "event",
+  "chosenAngle": "How a lower-priced, practical car helped families imagine travel beyond horses, streetcars, and trains",
+  "episodeThesis": "A machine can change daily life when engineers make it simple, durable, and cheaper for ordinary families to use.",
+  "timeline": [
+    "October 1, 1908: Ford introduces the Model T automobile",
+    "1908: The Model T is sold for about $850, still expensive but lower than many luxury cars of the time",
+    "1913-1914: Ford's moving assembly line helps reduce production time and pushes Model T prices downward",
+    "1927: Ford ends Model T production after building more than 15 million cars"
+  ],
+  "storyBeats": [
+    "A child in 1908 sees streets where horses, wagons, streetcars, and a few noisy automobiles all share the road",
+    "The Model T promises a car sturdy enough for rough roads and simple enough for more people to drive",
+    "Its falling price helps explain why cars moved from rare luxury machines toward everyday family transportation",
+    "The episode can compare horse-powered travel, early gasoline cars, and today's electric vehicles"
+  ],
+  "modernRelevance": "Modern debates about gasoline cars, electric vehicles, city design, traffic, and family mobility still trace back to the moment cars became practical mass-market transportation.",
+  "sources": [
+    {
+      "title": "Ford Motor Company: The Model T",
+      "url": "https://corporate.ford.com/articles/history/the-model-t.html",
+      "sourceType": "official"
+    },
+    {
+      "title": "The Henry Ford: Ford's Model T: A Car for the Great Multitude",
+      "url": "https://www.thehenryford.org/collections/explore/articles/fords-model-t",
+      "sourceType": "museum"
+    },
+    {
+      "title": "The Henry Ford: Advertisement for the 1909 Ford Model T, October 1, 1908",
+      "url": "https://www.thehenryford.org/collections/explore/artifact/331428",
+      "sourceType": "museum"
+    }
+  ],
+  "safetyNotes": []
+}
