@@ -1,30 +1,37 @@
 {
   "episodeDate": "2026-10-01",
-  "chosenSubject": "NASA begins operations",
+  "chosenSubject": "Ford Model T goes on sale",
   "entityType": "event",
-  "chosenAngle": "How a new civilian space agency turned a tense space race moment into organized exploration, science, and engineering",
-  "episodeThesis": "A public science agency can turn a big national challenge into missions that help people learn more about Earth, flight, and space.",
+  "chosenAngle": "How a lower-priced, practical car helped families imagine travel beyond horses, streetcars, and trains",
+  "episodeThesis": "A machine can change daily life when engineers make it simple, durable, and cheaper for ordinary families to use.",
   "timeline": [
-    "July 29, 1958: President Dwight D. Eisenhower signs the National Aeronautics and Space Act",
-    "August 19, 1958: T. Keith Glennan and Hugh L. Dryden are sworn in as NASA's first administrator and deputy administrator",
-    "October 1, 1958: NASA officially begins operations as the United States' civilian space agency"
+    "October 1, 1908: Ford introduces the Model T automobile",
+    "1908: The Model T is sold for about $850, still expensive but lower than many luxury cars of the time",
+    "1913-1914: Ford's moving assembly line helps reduce production time and pushes Model T prices downward",
+    "1927: Ford ends Model T production after building more than 15 million cars"
   ],
   "storyBeats": [
-    "A new agency opens for business while people are watching the space race closely",
-    "NASA brings together earlier aeronautics work from NACA with new space responsibilities",
-    "The first days of NASA show how exploration depends on teams, planning, and careful engineering"
+    "A child in 1908 sees streets where horses, wagons, streetcars, and a few noisy automobiles all share the road",
+    "The Model T promises a car sturdy enough for rough roads and simple enough for more people to drive",
+    "Its falling price helps explain why cars moved from rare luxury machines toward everyday family transportation",
+    "The episode can compare horse-powered travel, early gasoline cars, and today's electric vehicles"
   ],
-  "modernRelevance": "Modern weather satellites, space telescopes, planetary probes, aviation research, and human spaceflight still depend on the kind of organized civilian science mission NASA began on October 1, 1958.",
+  "modernRelevance": "Modern debates about gasoline cars, electric vehicles, city design, traffic, and family mobility still trace back to the moment cars became practical mass-market transportation.",
   "sources": [
     {
-      "title": "NASA: 65 Years Ago: NASA Begins Operations",
-      "url": "https://www.nasa.gov/history/65-years-ago-nasa-begins-operations/",
+      "title": "Ford Motor Company: The Model T",
+      "url": "https://corporate.ford.com/articles/history/the-model-t.html",
       "sourceType": "official"
     },
     {
-      "title": "NASA: NASA's Origins",
-      "url": "https://www.nasa.gov/image-article/nasas-origins/",
-      "sourceType": "official"
+      "title": "The Henry Ford: Ford's Model T: A Car for the Great Multitude",
+      "url": "https://www.thehenryford.org/collections/explore/articles/fords-model-t",
+      "sourceType": "museum"
+    },
+    {
+      "title": "The Henry Ford: Advertisement for the 1909 Ford Model T, October 1, 1908",
+      "url": "https://www.thehenryford.org/collections/explore/artifact/331428",
+      "sourceType": "museum"
     }
   ],
   "safetyNotes": []
