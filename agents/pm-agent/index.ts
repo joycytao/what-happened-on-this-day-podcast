@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { execFile as execFileCallback } from "node:child_process";
+import { promisify } from "node:util";
 import { evaluateTranscriptQuality } from "../writer-agent";
 import {
   buildEpisodeIssueDraft,
@@ -37,9 +39,21 @@ import { transcriptSchema, writerArtifactPaths, type Transcript } from "../../sr
 
 export { resolveEpisodeRequest, createRunManifest };
 
+const execFileAsync = promisify(execFileCallback);
+
 type ProducerResult = {
   audioPath: string;
   metadataPath: string;
+};
+
+export type PendingPullRequestFeedback = {
+  pullRequestNumber: number;
+  pullRequestTitle: string;
+  pullRequestUrl: string;
+  commentUrl: string;
+  author: string;
+  body: string;
+  createdAt: string;
 };
 
 export async function assertWriterTranscriptArtifact(runDir: string) {
@@ -222,6 +236,7 @@ export async function runPmAgentCli(
     auditEpisode?: typeof auditEpisode;
     advanceEpisodeAfterMerge?: typeof advanceEpisodeAfterMerge;
     blockEpisode?: typeof blockEpisode;
+    loadOpenPullRequestFeedback?: (input: { repo: string }) => Promise<PendingPullRequestFeedback[]>;
     loadFeatureIntakeContext?: () => Promise<Omit<FeatureIntakeInput, "request">>;
   } = {}
 ) {
@@ -282,8 +297,27 @@ export async function runPmAgentCli(
           await (dependencies.loadEpisodeIssues ?? (() => loadReadyEpisodeIssues({ repo })))(),
           { limit }
         );
+        const feedback = await (dependencies.loadOpenPullRequestFeedback ?? loadOpenPullRequestFeedback)({
+          repo
+        });
+
+        if (feedback.length > 0) {
+          logger.warn("Open pull request feedback requires review", {
+            repo,
+            feedbackCount: feedback.length,
+            firstPullRequestNumber: feedback[0]?.pullRequestNumber
+          });
+        }
 
         if (issues.length === 0) {
+          if (feedback.length > 0) {
+            return {
+              status: "pending_pr_feedback" as const,
+              reason: "Open pull request feedback requires review before the scheduler can report no work.",
+              feedback
+            };
+          }
+
           return {
             status: "noop" as const,
             reason: "No episode issue was eligible for advance-after-merge."
@@ -310,7 +344,8 @@ export async function runPmAgentCli(
 
         return {
           status: "completed" as const,
-          results
+          results,
+          ...(feedback.length > 0 ? { feedback } : {})
         };
       }
 
@@ -526,6 +561,86 @@ function parseLimitOption(value: string | boolean | undefined) {
 
 function normalizeLabelForScheduler(label: string) {
   return label.trim().toLowerCase().replace(/\s*:\s*/g, ":");
+}
+
+export async function loadOpenPullRequestFeedback(input: {
+  repo: string;
+  execFile?: (file: string, args: string[]) => Promise<string>;
+}): Promise<PendingPullRequestFeedback[]> {
+  const output = await (input.execFile ?? execFileText)("gh", [
+    "pr",
+    "list",
+    "--repo",
+    input.repo,
+    "--state",
+    "open",
+    "--limit",
+    "100",
+    "--json",
+    "number,title,url,comments"
+  ]);
+  const pullRequests = JSON.parse(output) as Array<{
+    number: number;
+    title: string;
+    url: string;
+    comments?: Array<{
+      author?: { login?: string };
+      body?: string;
+      createdAt?: string;
+      url?: string;
+    }>;
+  }>;
+
+  return pullRequests.flatMap((pullRequest) => pendingFeedbackForPullRequest(pullRequest));
+}
+
+function pendingFeedbackForPullRequest(pullRequest: {
+  number: number;
+  title: string;
+  url: string;
+  comments?: Array<{
+    author?: { login?: string };
+    body?: string;
+    createdAt?: string;
+    url?: string;
+  }>;
+}): PendingPullRequestFeedback[] {
+  const comments = [...(pullRequest.comments ?? [])].sort((left, right) =>
+    String(left.createdAt ?? "").localeCompare(String(right.createdAt ?? ""))
+  );
+  let lastAddressedIndex = -1;
+
+  for (let index = comments.length - 1; index >= 0; index -= 1) {
+    if (isFeedbackAddressedComment(comments[index]?.body ?? "")) {
+      lastAddressedIndex = index;
+      break;
+    }
+  }
+
+  return comments
+    .slice(lastAddressedIndex + 1)
+    .filter((comment) => !isFeedbackAddressedComment(comment.body ?? ""))
+    .filter((comment) => Boolean(comment.body?.trim()) && Boolean(comment.url) && Boolean(comment.createdAt))
+    .map((comment) => ({
+      pullRequestNumber: pullRequest.number,
+      pullRequestTitle: pullRequest.title,
+      pullRequestUrl: pullRequest.url,
+      commentUrl: comment.url!,
+      author: comment.author?.login ?? "unknown",
+      body: comment.body!.trim(),
+      createdAt: comment.createdAt!
+    }));
+}
+
+function isFeedbackAddressedComment(body: string) {
+  return /pm-agent:feedback-addressed|read and addressed|feedback addressed/i.test(body);
+}
+
+async function execFileText(file: string, args: string[]) {
+  const result = await execFileAsync(file, args, {
+    encoding: "utf8"
+  });
+  return result.stdout.trim();
 }
 
 export async function auditEpisode(input: { repoRoot: string; issue: EpisodeIssue }) {
