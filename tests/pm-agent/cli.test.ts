@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runPmAgentCli } from "../../agents/pm-agent";
+import { loadOpenPullRequestFeedback, runPmAgentCli } from "../../agents/pm-agent";
 
 type EpisodeIssueDraft = { title: string; body: string; labels: string[] };
 
@@ -290,6 +290,7 @@ describe("pm agent cli", () => {
             state: "OPEN" as const
           }
         ],
+        loadOpenPullRequestFeedback: async () => [],
         advanceEpisodeAfterMerge: async ({ issue }: { issue: { issueNumber: number } }) => {
           advancedIssues.push(issue.issueNumber);
           return {
@@ -360,6 +361,7 @@ describe("pm agent cli", () => {
             state: "OPEN" as const
           }
         ],
+        loadOpenPullRequestFeedback: async () => [],
         advanceEpisodeAfterMerge: async ({ issue }: { issue: { issueNumber: number } }) => {
           advancedIssues.push(issue.issueNumber);
           return {
@@ -386,6 +388,87 @@ describe("pm agent cli", () => {
     expect(advancedIssues).toEqual([24, 25]);
   });
 
+  it("surfaces pending open PR feedback while still advancing eligible issues", async () => {
+    const warnings: Array<{ message: string; meta?: Record<string, unknown> }> = [];
+    const advancedIssues: number[] = [];
+
+    const result = await runPmAgentCli(
+      [
+        "node",
+        "pm-agent",
+        "advance-after-merge",
+        "--repo",
+        "joycytao/what-happened-on-this-day-podcast"
+      ],
+      {
+        repoRoot: "/tmp/podcast-repo",
+        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+        loadEpisodeIssues: async () => [
+          {
+            issueNumber: 24,
+            title: "Episode: August 24, 2026",
+            body: "date: 2026-08-24\nepisode_slug: 2026-08-24-august-24-2026\ncurrent_stage: writing",
+            labels: ["status:writing", "agent:writer"],
+            state: "OPEN" as const
+          }
+        ],
+        loadOpenPullRequestFeedback: async () => [
+          {
+            pullRequestNumber: 82,
+            pullRequestTitle: "Issue #51: add October 1 research package",
+            pullRequestUrl: "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/82",
+            commentUrl:
+              "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/82#issuecomment-1",
+            author: "joycytao",
+            body: "平價汽車！ 福特 T 型車上市 (1908)",
+            createdAt: "2026-09-04T18:35:50Z"
+          }
+        ],
+        advanceEpisodeAfterMerge: async ({ issue }: { issue: { issueNumber: number } }) => {
+          advancedIssues.push(issue.issueNumber);
+          return {
+            issueNumber: issue.issueNumber,
+            currentStage: "producing" as const,
+            activeAgentLabel: "agent:producer" as const
+          };
+        },
+        logger: {
+          info() {},
+          warn(message: string, meta?: Record<string, unknown>) {
+            warnings.push({ message, meta });
+          },
+          error() {}
+        }
+      }
+    );
+
+    expect(result).toMatchObject({
+      status: "completed",
+      results: [
+        {
+          issueNumber: 24,
+          currentStage: "producing",
+          activeAgentLabel: "agent:producer"
+        }
+      ],
+      feedback: [
+        {
+          pullRequestNumber: 82,
+          body: "平價汽車！ 福特 T 型車上市 (1908)"
+        }
+      ]
+    });
+    expect(advancedIssues).toEqual([24]);
+    expect(warnings[0]).toMatchObject({
+      message: "Open pull request feedback requires review",
+      meta: {
+        repo: "joycytao/what-happened-on-this-day-podcast",
+        feedbackCount: 1,
+        firstPullRequestNumber: 82
+      }
+    });
+  });
+
   it("exits advance-after-merge cleanly when no active merged issue exists", async () => {
     const result = await runPmAgentCli(
       [
@@ -407,6 +490,7 @@ describe("pm agent cli", () => {
             state: "OPEN" as const
           }
         ],
+        loadOpenPullRequestFeedback: async () => [],
         logger: {
           info() {},
           warn() {},
@@ -419,6 +503,115 @@ describe("pm agent cli", () => {
       status: "noop",
       reason: "No episode issue was eligible for advance-after-merge."
     });
+  });
+
+  it("surfaces pending open PR feedback during scheduled advance-after-merge", async () => {
+    const warnings: Array<{ message: string; meta?: Record<string, unknown> }> = [];
+
+    const result = await runPmAgentCli(
+      [
+        "node",
+        "pm-agent",
+        "advance-after-merge",
+        "--repo",
+        "joycytao/what-happened-on-this-day-podcast"
+      ],
+      {
+        repoRoot: "/tmp/podcast-repo",
+        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+        loadEpisodeIssues: async () => [],
+        loadOpenPullRequestFeedback: async () => [
+          {
+            pullRequestNumber: 82,
+            pullRequestTitle: "Issue #51: add October 1 research package",
+            pullRequestUrl: "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/82",
+            commentUrl:
+              "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/82#issuecomment-1",
+            author: "joycytao",
+            body: "平價汽車！ 福特 T 型車上市 (1908)",
+            createdAt: "2026-09-04T18:35:50Z"
+          }
+        ],
+        logger: {
+          info() {},
+          warn(message: string, meta?: Record<string, unknown>) {
+            warnings.push({ message, meta });
+          },
+          error() {}
+        }
+      }
+    );
+
+    expect(result).toEqual({
+      status: "pending_pr_feedback",
+      reason: "Open pull request feedback requires review before the scheduler can report no work.",
+      feedback: [
+        {
+          pullRequestNumber: 82,
+          pullRequestTitle: "Issue #51: add October 1 research package",
+          pullRequestUrl: "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/82",
+          commentUrl:
+            "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/82#issuecomment-1",
+          author: "joycytao",
+          body: "平價汽車！ 福特 T 型車上市 (1908)",
+          createdAt: "2026-09-04T18:35:50Z"
+        }
+      ]
+    });
+    expect(warnings[0]).toMatchObject({
+      message: "Open pull request feedback requires review",
+      meta: {
+        repo: "joycytao/what-happened-on-this-day-podcast",
+        feedbackCount: 1,
+        firstPullRequestNumber: 82
+      }
+    });
+  });
+
+  it("ignores PR comments before the latest feedback-addressed marker", async () => {
+    const feedback = await loadOpenPullRequestFeedback({
+      repo: "joycytao/what-happened-on-this-day-podcast",
+      execFile: async () =>
+        JSON.stringify([
+          {
+            number: 82,
+            title: "Issue #51: add October 1 research package",
+            url: "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/82",
+            comments: [
+              {
+                author: { login: "joycytao" },
+                body: "平價汽車！ 福特 T 型車上市 (1908)",
+                createdAt: "2026-09-04T18:35:50Z",
+                url: "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/82#issuecomment-1"
+              },
+              {
+                author: { login: "joycytao" },
+                body: "Read and addressed the PR comment.",
+                createdAt: "2026-09-04T20:40:14Z",
+                url: "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/82#issuecomment-2"
+              },
+              {
+                author: { login: "joycytao" },
+                body: "再確認一下售價換算。",
+                createdAt: "2026-09-04T20:45:14Z",
+                url: "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/82#issuecomment-3"
+              }
+            ]
+          }
+        ])
+    });
+
+    expect(feedback).toEqual([
+      {
+        pullRequestNumber: 82,
+        pullRequestTitle: "Issue #51: add October 1 research package",
+        pullRequestUrl: "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/82",
+        commentUrl: "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/82#issuecomment-3",
+        author: "joycytao",
+        body: "再確認一下售價換算。",
+        createdAt: "2026-09-04T20:45:14Z"
+      }
+    ]);
   });
 
   it("triages a new feature request before creating work", async () => {
