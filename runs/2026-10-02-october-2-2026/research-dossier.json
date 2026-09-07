@@ -1,0 +1,44 @@
+{
+  "episodeDate": "2026-10-02",
+  "chosenSubject": "The first Peanuts comic strip is published",
+  "entityType": "event",
+  "chosenAngle": "How four small newspaper panels introduced Charlie Brown and helped children see big feelings in simple drawings",
+  "episodeThesis": "A simple comic strip can last for generations when it makes everyday worries, friendship, and persistence feel recognizable.",
+  "timeline": [
+    "Spring 1950: Charles M. Schulz sells his newspaper cartoon idea to United Feature Syndicate after earlier rejections",
+    "Summer 1950: The syndicate renames Schulz's strip Peanuts before publication, a title Schulz later said he disliked",
+    "October 2, 1950: The first Peanuts comic strip debuts in a four-panel format in seven newspapers nationwide",
+    "December 21, 1950: Charlie Brown first appears in his now-famous zigzag shirt",
+    "January 6, 1952: The first full-color Sunday Peanuts strips are introduced"
+  ],
+  "storyBeats": [
+    "A young listener opens a 1950 newspaper and finds a tiny four-panel strip instead of a loud headline",
+    "Charlie Brown appears before his famous zigzag shirt, and Snoopy is still a small dog who walks on all fours",
+    "Schulz turns ordinary feelings, such as embarrassment, hope, and trying again, into jokes children can understand",
+    "The strip grows from seven newspapers into a shared language of characters, pictures, and gentle frustration"
+  ],
+  "modernRelevance": "Modern comics, animation, stickers, memes, and short visual stories still use the same basic power Peanuts showed: a few clear drawings can help people name complicated feelings.",
+  "sources": [
+    {
+      "title": "Charles M. Schulz Museum: Timeline Archive",
+      "url": "https://schulzmuseum.org/timeline/",
+      "sourceType": "archive"
+    },
+    {
+      "title": "Charles M. Schulz Museum: Frequently Asked Questions",
+      "url": "https://schulzmuseum.org/about-schulz/frequently-asked-questions/",
+      "sourceType": "reference"
+    },
+    {
+      "title": "Peanuts: Charlie Brown",
+      "url": "https://www.peanuts.com/about/charlie-brown",
+      "sourceType": "official"
+    },
+    {
+      "title": "Scholastic Art: Charles M. Schulz",
+      "url": "https://art.scholastic.com/pages/topics/art-on-demand/artists/charles-m-schulz.html",
+      "sourceType": "reference"
+    }
+  ],
+  "safetyNotes": []
+}
