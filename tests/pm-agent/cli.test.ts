@@ -388,6 +388,60 @@ describe("pm agent cli", () => {
     expect(advancedIssues).toEqual([24, 25]);
   });
 
+  it("recovers auto-closed active episode issues during scheduled advance-after-merge", async () => {
+    const advancedIssues: number[] = [];
+
+    const result = await runPmAgentCli(
+      [
+        "node",
+        "pm-agent",
+        "advance-after-merge",
+        "--repo",
+        "joycytao/what-happened-on-this-day-podcast"
+      ],
+      {
+        repoRoot: "/tmp/podcast-repo",
+        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+        loadEpisodeIssues: async () => [
+          {
+            issueNumber: 51,
+            title: "Episode: October 1, 2026",
+            body: "date: 2026-10-01\nepisode_slug: 2026-10-01-october-1-2026\ncurrent_stage: ready",
+            labels: ["status:ready", "agent:research", "claim:research-agent"],
+            state: "CLOSED" as const
+          }
+        ],
+        loadOpenPullRequestFeedback: async () => [],
+        advanceEpisodeAfterMerge: async ({ issue }: { issue: { issueNumber: number; state?: string } }) => {
+          advancedIssues.push(issue.issueNumber);
+          expect(issue.state).toBe("CLOSED");
+          return {
+            issueNumber: issue.issueNumber,
+            currentStage: "writing" as const,
+            activeAgentLabel: "agent:writer" as const
+          };
+        },
+        logger: {
+          info() {},
+          warn() {},
+          error() {}
+        }
+      }
+    );
+
+    expect(result).toMatchObject({
+      status: "completed",
+      results: [
+        {
+          issueNumber: 51,
+          currentStage: "writing",
+          activeAgentLabel: "agent:writer"
+        }
+      ]
+    });
+    expect(advancedIssues).toEqual([51]);
+  });
+
   it("surfaces pending open PR feedback while still advancing eligible issues", async () => {
     const warnings: Array<{ message: string; meta?: Record<string, unknown> }> = [];
     const advancedIssues: number[] = [];

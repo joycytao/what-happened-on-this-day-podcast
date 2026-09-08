@@ -227,7 +227,7 @@ export async function loadReadyEpisodeIssues(input: { repo: string }): Promise<E
     "--repo",
     input.repo,
     "--state",
-    "open",
+    "all",
     "--limit",
     "100",
     "--json",
@@ -375,7 +375,19 @@ export async function updateEpisodeIssueStageOnGitHub(
     args.push("--add-label", updates.nextAgentLabel);
   }
 
-  const output = await (options.execFile ?? execFileText)("gh", args);
+  const execFile = options.execFile ?? execFileText;
+
+  if (issue.state === "CLOSED") {
+    await execFile("gh", [
+      "issue",
+      "reopen",
+      String(issue.issueNumber),
+      "--repo",
+      options.repo
+    ]);
+  }
+
+  const output = await execFile("gh", args);
   const nextLabels = [
     ...issue.labels.filter((label) => {
       const normalized = normalizeLabel(label);
@@ -388,6 +400,7 @@ export async function updateEpisodeIssueStageOnGitHub(
   return {
     ...issue,
     body,
+    state: "OPEN",
     labels: nextLabels,
     issueUrl: output.trim()
   };

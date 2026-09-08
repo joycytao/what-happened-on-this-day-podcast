@@ -533,13 +533,12 @@ function selectEpisodeIssuesForScheduledAdvance(
 ) {
   return [...issues]
     .filter((issue) => {
-      if (issue.state && issue.state !== "OPEN") return false;
-
       const labels = new Set(issue.labels.map(normalizeLabelForScheduler));
       if (labels.has("status:blocked")) return false;
 
       return (
-        (labels.has("agent:research") && labels.has("status:researching")) ||
+        (labels.has("agent:research") &&
+          (labels.has("status:researching") || labels.has("claim:research-agent"))) ||
         (labels.has("agent:writer") && labels.has("status:writing")) ||
         (labels.has("agent:producer") && labels.has("status:producing"))
       );
