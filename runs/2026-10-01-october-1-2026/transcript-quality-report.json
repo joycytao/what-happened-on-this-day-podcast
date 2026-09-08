@@ -1,0 +1,35 @@
+{
+  "status": "pass",
+  "checks": {
+    "duration_5_to_8_min": {
+      "status": "pass",
+      "actual": 6,
+      "expected": "estimatedDurationMin is between 5 and 8"
+    },
+    "five_module_structure": {
+      "status": "pass",
+      "actual": 5,
+      "expected": "five Time Machine Adventure modules are present"
+    },
+    "sfx_or_bgm_density": {
+      "status": "pass",
+      "actual": 11,
+      "expected": "at least 6 [SFX] or [BGM] cues for 6 minutes"
+    },
+    "attention_resets": {
+      "status": "pass",
+      "actual": 6,
+      "expected": "at least 2 [Action] prompts or direct questions"
+    },
+    "direct_second_person_address": {
+      "status": "pass",
+      "actual": 40,
+      "expected": "at least 10 uses of you/your"
+    },
+    "pronunciation_notes": {
+      "status": "pass",
+      "actual": 3,
+      "expected": "ttsNotes include pronunciation or phonetic support"
+    }
+  }
+}
