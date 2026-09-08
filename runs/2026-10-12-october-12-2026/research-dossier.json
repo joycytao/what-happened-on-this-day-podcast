@@ -1,0 +1,47 @@
+{
+  "episodeDate": "2026-10-12",
+  "chosenSubject": "A royal wedding plants the seed for Oktoberfest",
+  "entityType": "event",
+  "chosenAngle": "How a wedding celebration for Ludwig and Therese became a public tradition that Munich still remembers",
+  "episodeThesis": "A community celebration can become history when people repeat it, reshape it, and attach it to a place.",
+  "timeline": [
+    "October 12, 1810: Crown Prince Ludwig of Bavaria marries Princess Therese of Saxe-Hildburghausen",
+    "October 17, 1810: Official wedding festivities end with a public horse race on a meadow outside Munich",
+    "1811: The Bavarian Agricultural Association helps continue the festival as a yearly event",
+    "1819: Munich's city leaders take over organization of the Oktoberfest",
+    "1872: Oktoberfest is moved earlier into September to take advantage of milder weather"
+  ],
+  "storyBeats": [
+    "A child in Munich hears that a royal wedding is not only for palaces: ordinary people are invited to celebrate too",
+    "The party moves to a meadow outside the city, where a horse race turns a wedding into a public memory",
+    "The meadow receives a name connected to Princess Therese, and the place itself becomes part of the story",
+    "Each repeat celebration adds new layers until a one-time wedding party becomes a city tradition"
+  ],
+  "modernRelevance": "Modern festivals, school traditions, parades, and annual community events often begin the same way: one shared moment works so well that people decide to bring it back.",
+  "sources": [
+    {
+      "title": "Oktoberfest.de: The history of Oktoberfest",
+      "url": "https://www.oktoberfest.de/en/magazine/tradition/the-history-of-oktoberfest",
+      "sourceType": "official"
+    },
+    {
+      "title": "Muenchen.de: The History of the Oktoberfest in Munich",
+      "url": "https://www.muenchen.de/en/events/oktoberfest/history-oktoberfest-munich",
+      "sourceType": "official"
+    },
+    {
+      "title": "Muenchen.de: Oktoberfest FAQ",
+      "url": "https://www.muenchen.de/en/events/oktoberfest/visitor-service/faq",
+      "sourceType": "official"
+    },
+    {
+      "title": "Britannica: Oktoberfest",
+      "url": "https://www.britannica.com/topic/Oktoberfest",
+      "sourceType": "reference"
+    }
+  ],
+  "safetyNotes": [
+    "Keep the episode focused on community tradition, place names, horses, and annual celebrations.",
+    "Do not center beer drinking; mention only if needed as a modern adult festival detail and keep it non-promotional."
+  ]
+}
