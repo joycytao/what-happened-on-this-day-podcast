@@ -17,7 +17,7 @@ The Henry Ford: Ford's Model T: A Car for the Great Multitude (https://www.thehe
 
 Source: The Henry Ford: Ford's Model T: A Car for the Great Multitude
 URL: https://www.thehenryford.org/collections/explore/articles/fords-model-t
-Source type: museum
+Source type: reference
 
 ## ref-3
 
@@ -25,4 +25,4 @@ The Henry Ford artifact page for Advertisement for the 1909 Ford Model T, "The F
 
 Source: The Henry Ford: Advertisement for the 1909 Ford Model T, October 1, 1908
 URL: https://www.thehenryford.org/collections/explore/artifact/331428
-Source type: museum
+Source type: reference
