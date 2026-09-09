@@ -1,0 +1,24 @@
+{
+  "episodeDate": "2026-10-04",
+  "chosenSubject": "The launch of Windows 95",
+  "items": [
+    {
+      "id": "ref-1",
+      "summary": "Microsoft Stories: Launch of Windows 95 (https://news.microsoft.com/announcement/launch-of-windows-95/) states that Windows 95 launched on August 24, 1995. The source says the launch included midnight store openings and lines of customers worldwide. It also describes user-facing features such as the Start button, taskbar, Recycle Bin, desktop shortcuts, long file names, and plug and play support. Microsoft reports in this source that Windows 95 sold 7 million copies in its first five weeks.",
+      "source": {
+        "title": "Microsoft Stories: Launch of Windows 95",
+        "url": "https://news.microsoft.com/announcement/launch-of-windows-95/",
+        "sourceType": "official"
+      }
+    },
+    {
+      "id": "ref-2",
+      "summary": "Computer History Museum: August 24, Microsoft Ships Windows 95 (https://www.computerhistory.org/tdih/august/24/) identifies August 24, 1995 as the date Microsoft shipped Windows 95. The source describes the launch campaign as unusually large for computing history and says sales exceeded predictions. It connects the Windows 95 launch to the broader history of personal computing.",
+      "source": {
+        "title": "Computer History Museum: August 24, Microsoft Ships Windows 95",
+        "url": "https://www.computerhistory.org/tdih/august/24/",
+        "sourceType": "archive"
+      }
+    }
+  ]
+}
