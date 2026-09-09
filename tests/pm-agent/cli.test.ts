@@ -357,7 +357,7 @@ describe("pm agent cli", () => {
             issueNumber: 25,
             title: "Episode: August 25, 2026",
             body: "date: 2026-08-25\nepisode_slug: 2026-08-25-august-25-2026\ncurrent_stage: producing",
-            labels: ["status:producing", "agent:producer"],
+            labels: ["status:producing", "agent:producer", "claim:producer-agent"],
             state: "OPEN" as const
           }
         ],
@@ -386,6 +386,53 @@ describe("pm agent cli", () => {
       ]
     });
     expect(advancedIssues).toEqual([24, 25]);
+  });
+
+  it("does not run producer audio gate before producer-agent has claimed the issue", async () => {
+    const advancedIssues: number[] = [];
+
+    const result = await runPmAgentCli(
+      [
+        "node",
+        "pm-agent",
+        "advance-after-merge",
+        "--repo",
+        "joycytao/what-happened-on-this-day-podcast"
+      ],
+      {
+        repoRoot: "/tmp/podcast-repo",
+        resolveWorkspaceRoot: async () => "/tmp/podcast-repo",
+        loadEpisodeIssues: async () => [
+          {
+            issueNumber: 52,
+            title: "Episode: October 2, 2026",
+            body: "date: 2026-10-02\nepisode_slug: 2026-10-02-october-2-2026\ncurrent_stage: producing",
+            labels: ["status:producing", "agent:producer"],
+            state: "OPEN" as const
+          }
+        ],
+        loadOpenPullRequestFeedback: async () => [],
+        advanceEpisodeAfterMerge: async ({ issue }: { issue: { issueNumber: number } }) => {
+          advancedIssues.push(issue.issueNumber);
+          return {
+            issueNumber: issue.issueNumber,
+            currentStage: "review" as const,
+            activeAgentLabel: undefined
+          };
+        },
+        logger: {
+          info() {},
+          warn() {},
+          error() {}
+        }
+      }
+    );
+
+    expect(result).toEqual({
+      status: "noop",
+      reason: "No episode issue was eligible for advance-after-merge."
+    });
+    expect(advancedIssues).toEqual([]);
   });
 
   it("recovers auto-closed active episode issues during scheduled advance-after-merge", async () => {

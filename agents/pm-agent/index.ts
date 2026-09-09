@@ -540,7 +540,9 @@ function selectEpisodeIssuesForScheduledAdvance(
         (labels.has("agent:research") &&
           (labels.has("status:researching") || labels.has("claim:research-agent"))) ||
         (labels.has("agent:writer") && labels.has("status:writing")) ||
-        (labels.has("agent:producer") && labels.has("status:producing"))
+        (labels.has("agent:producer") &&
+          labels.has("status:producing") &&
+          labels.has("claim:producer-agent"))
       );
     })
     .sort((left, right) => left.issueNumber - right.issueNumber)
