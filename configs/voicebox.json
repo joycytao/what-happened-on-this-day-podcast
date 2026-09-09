@@ -1,6 +1,6 @@
 {
   "engine": "voicebox",
-  "mode": "dry-run",
+  "mode": "production",
   "baseUrl": "http://127.0.0.1:17493",
   "endpoint": "speak",
   "clientId": "what-happened-on-this-day-producer",
