@@ -7,7 +7,7 @@ import type { Transcript } from "../../src/contracts";
 import { parseTranscriptMarkdown } from "../../src/contracts";
 import { parseCliArgs } from "../../src/lib/cli";
 import { loadJsonConfig } from "../../src/lib/content-assets";
-import { renderWithVoicebox, validateVoiceboxConfig } from "./voicebox-adapter";
+import { renderWithVoicebox, validateVoiceboxConfig, type VoiceboxRenderOptions } from "./voicebox-adapter";
 import {
   claimIssueForAgent,
   loadOpenIssueQueueIssues,
@@ -55,21 +55,30 @@ type ProducerPickupResult =
       reason: string;
     };
 
-export async function runProducerAgent(transcript: Transcript, outputDir: string) {
-  const voicebox = validateVoiceboxConfig(await loadJsonConfig("voicebox"));
+export async function runProducerAgent(
+  transcript: Transcript,
+  outputDir: string,
+  options: VoiceboxRenderOptions = {}
+) {
+  const voicebox = validateVoiceboxConfig(options.config ?? (await loadJsonConfig("voicebox")));
 
   return renderWithVoicebox({
     voicePreset: voicebox.voiceProfile ?? voicebox.voicePreset ?? "story-narrator-01",
     outputAudioPath: path.join(outputDir, "final.mp3"),
     transcript
   }, {
+    ...options,
     config: voicebox
   });
 }
 
-export async function runProducerAgentFromTranscriptMarkdown(transcriptPath: string, outputDir: string) {
+export async function runProducerAgentFromTranscriptMarkdown(
+  transcriptPath: string,
+  outputDir: string,
+  options: VoiceboxRenderOptions = {}
+) {
   const transcript = parseTranscriptMarkdown(await fs.readFile(transcriptPath, "utf8"));
-  const voicebox = validateVoiceboxConfig(await loadJsonConfig("voicebox"));
+  const voicebox = validateVoiceboxConfig(options.config ?? (await loadJsonConfig("voicebox")));
 
   return renderWithVoicebox({
     voicePreset: voicebox.voiceProfile ?? voicebox.voicePreset ?? "story-narrator-01",
@@ -77,6 +86,7 @@ export async function runProducerAgentFromTranscriptMarkdown(transcriptPath: str
     outputAudioPath: path.join(outputDir, "final.mp3"),
     transcript
   }, {
+    ...options,
     config: voicebox
   });
 }

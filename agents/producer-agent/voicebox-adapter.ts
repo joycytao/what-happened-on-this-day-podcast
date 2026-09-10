@@ -59,7 +59,7 @@ export type VoiceboxRequest = {
   body: Record<string, unknown>;
 };
 
-type VoiceboxRenderOptions = {
+export type VoiceboxRenderOptions = {
   config?: VoiceboxConfig;
   fetch?: typeof fetch;
   sleep?: (durationMs: number) => Promise<void>;

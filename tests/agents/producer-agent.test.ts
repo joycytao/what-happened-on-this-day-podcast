@@ -19,8 +19,32 @@ import {
   type VoiceboxConfig
 } from "../../agents/producer-agent/voicebox-adapter.js";
 import { serializeTranscriptMarkdown, type Transcript } from "../../src/contracts";
+import { loadJsonConfig } from "../../src/lib/content-assets";
+
+function dryRunVoiceboxConfig(overrides: Partial<VoiceboxConfig> = {}) {
+  return validateVoiceboxConfig({
+    engine: "voicebox",
+    mode: "dry-run",
+    voicePreset: "story-narrator-01",
+    outputFormat: "mp3",
+    enableVoiceCloning: false,
+    ...overrides
+  });
+}
 
 describe("producer agent", () => {
+  it("uses production Voicebox config for scheduled producer renders", async () => {
+    const config = validateVoiceboxConfig(await loadJsonConfig("voicebox"));
+    const request = buildVoiceboxRequest(config, "Hello from the time machine.");
+
+    expect(config.mode).toBe("production");
+    expect(config.baseUrl).toBe("http://127.0.0.1:17493");
+    expect(config.endpoint).toBe("speak");
+    expect(config.ttsEngine).toBe("qwen_custom_voice");
+    expect(config.voiceProfile).toBe("story-narrator-01");
+    expect(request.url).toBe("http://127.0.0.1:17493/speak");
+  });
+
   it("creates audio metadata from a transcript", async () => {
     const outputDir = await fs.mkdtemp(path.join(os.tmpdir(), "producer-agent-"));
 
@@ -32,7 +56,8 @@ describe("producer agent", () => {
         estimatedDurationMin: 5,
         ttsNotes: ["Warm pace"]
       },
-      outputDir
+      outputDir,
+      { config: dryRunVoiceboxConfig() }
     );
 
     expect(result.audioPath).toContain("final.mp3");
@@ -71,7 +96,9 @@ describe("producer agent", () => {
       "utf8"
     );
 
-    const result = await runProducerAgentFromTranscriptMarkdown(transcriptPath, outputDir);
+    const result = await runProducerAgentFromTranscriptMarkdown(transcriptPath, outputDir, {
+      config: dryRunVoiceboxConfig()
+    });
     const metadata = JSON.parse(await fs.readFile(result.metadataPath, "utf8"));
     const manifest = JSON.parse(await fs.readFile(result.sfxManifestPath, "utf8"));
     const finalAudio = await fs.readFile(result.audioPath, "utf8");
@@ -190,7 +217,8 @@ describe("producer agent", () => {
         estimatedDurationMin: 5,
         ttsNotes: ["Warm pace"]
       },
-      outputDir
+      outputDir,
+      { config: dryRunVoiceboxConfig() }
     );
 
     expect(result.sfxManifestPath).toContain("sfx-manifest.json");
@@ -225,7 +253,8 @@ describe("producer agent", () => {
         estimatedDurationMin: 5,
         ttsNotes: ["Warm pace"]
       },
-      outputDir
+      outputDir,
+      { config: dryRunVoiceboxConfig() }
     );
 
     const manifest = JSON.parse(await fs.readFile(result.sfxManifestPath, "utf8"));
