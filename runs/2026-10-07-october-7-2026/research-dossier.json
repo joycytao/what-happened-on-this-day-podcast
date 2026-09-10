@@ -1,0 +1,36 @@
+{
+  "episodeDate": "2026-10-07",
+  "chosenSubject": "Luna 3 photographs the far side of the Moon",
+  "entityType": "event",
+  "chosenAngle": "How a grainy space photograph changed what people knew about a hidden half of the Moon",
+  "episodeThesis": "Exploration can turn an unseen mystery into shared knowledge, even when the first evidence is imperfect.",
+  "timeline": [
+    "October 4, 1959: The Soviet Luna 3 spacecraft launches toward the Moon.",
+    "October 7, 1959: Luna 3 takes the first photographs of the Moon's far side after passing behind the Moon.",
+    "After the flyby: The spacecraft develops and scans its film onboard, then transmits the images back to Earth."
+  ],
+  "storyBeats": [
+    "From Earth, people always see the same face of the Moon, so the far side was a real unknown.",
+    "Luna 3 loops behind the Moon and points its camera at a place no human eyes had seen.",
+    "The first pictures are noisy and low resolution, but they reveal that the far side looks different from the familiar near side."
+  ],
+  "modernRelevance": "Modern Moon orbiters still build on the same basic idea: send robotic explorers where people cannot yet go, then turn their data into maps everyone can study.",
+  "sources": [
+    {
+      "title": "NASA Science: First Close-up of the Far Side of Moon",
+      "url": "https://science.nasa.gov/resource/first-close-up-of-the-far-side-of-moon/",
+      "sourceType": "official"
+    },
+    {
+      "title": "NASA History: 60 Years Ago, Luna 2 Makes Impact in Moon Race",
+      "url": "https://www.nasa.gov/history/60-years-ago-luna-2-makes-impact-in-moon-race/",
+      "sourceType": "official"
+    },
+    {
+      "title": "NASA Science: First Photo of the Lunar Far Side",
+      "url": "https://science.nasa.gov/resource/first-photo-of-the-lunar-far-side/",
+      "sourceType": "official"
+    }
+  ],
+  "safetyNotes": []
+}
