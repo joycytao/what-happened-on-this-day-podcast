@@ -1,0 +1,31 @@
+{
+  "episodeDate": "2026-10-05",
+  "chosenSubject": "The launch of Windows 95",
+  "entityType": "event",
+  "chosenAngle": "How a software launch helped make personal computers feel easier for everyday families",
+  "episodeThesis": "A computer interface can change how people learn, work, and explore at home.",
+  "timeline": [
+    "August 24, 1995: Microsoft launches Windows 95",
+    "1995: Windows 95 introduces the Start button, taskbar, desktop shortcuts, and plug and play support",
+    "First five weeks after launch: Microsoft reports 7 million copies sold"
+  ],
+  "storyBeats": [
+    "Families and computer stores wait for a midnight software launch",
+    "A new Start button and taskbar make computers feel more approachable",
+    "The launch shows how software can change daily habits"
+  ],
+  "modernRelevance": "Modern phones, tablets, and laptops still depend on interface choices that help people find apps, files, and settings.",
+  "sources": [
+    {
+      "title": "Microsoft Stories: Launch of Windows 95",
+      "url": "https://news.microsoft.com/announcement/launch-of-windows-95/",
+      "sourceType": "official"
+    },
+    {
+      "title": "Computer History Museum: August 24, Microsoft Ships Windows 95",
+      "url": "https://www.computerhistory.org/tdih/august/24/",
+      "sourceType": "archive"
+    }
+  ],
+  "safetyNotes": []
+}
