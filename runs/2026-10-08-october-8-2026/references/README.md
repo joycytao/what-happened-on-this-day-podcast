@@ -1,0 +1,28 @@
+# Research references
+
+Episode date: 2026-10-08
+Chosen subject: The Great Chicago Fire begins
+
+## ref-1
+
+Library of Congress Research Guide: Great Chicago Fire of 1871 (https://guides.loc.gov/chronicling-america-great-chicago-fire) gives a timeline stating that the fire began around 9:00 p.m. on October 8, 1871 near 137 DeKoven Street, continued on October 9, and was extinguished early on October 10. The source also notes historic newspaper coverage and later myths about the fire's cause.
+
+Source: Library of Congress Research Guide: Great Chicago Fire of 1871
+URL: https://guides.loc.gov/chronicling-america-great-chicago-fire
+Source type: archive
+
+## ref-2
+
+National Archives Museum: 150 Years Ago: The Great Chicago Fire (https://visit.archives.gov/whats-on/explore-exhibits/150-years-ago-great-chicago-fire) states that the fire's exact origin on the night of October 8, 1871 remains unknown. The source explains that strong winds, very dry conditions, and plentiful fuel helped the fire spread, and that by October 10 it had left major destruction, deaths, and homelessness.
+
+Source: National Archives Museum: 150 Years Ago: The Great Chicago Fire
+URL: https://visit.archives.gov/whats-on/explore-exhibits/150-years-ago-great-chicago-fire
+Source type: official
+
+## ref-3
+
+Library of Congress: The Great conflagration of Chicago. October 8th and 9th, 1871 (https://www.loc.gov/item/2007660856/) catalogs an 1871 panoramic photograph of the city in ruins and dates the subject to October 8-9, 1871. The catalog record identifies the image as a primary visual source documenting the burned business and residential portions of Chicago.
+
+Source: Library of Congress: The Great conflagration of Chicago. October 8th and 9th, 1871
+URL: https://www.loc.gov/item/2007660856/
+Source type: archive
