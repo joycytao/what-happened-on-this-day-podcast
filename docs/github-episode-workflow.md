@@ -250,6 +250,13 @@ Writer-agent owns script writing:
 
 Writer-agent must not add `agent:producer` or advance the stage.
 
+Writer-agent pickup is gated by the Transcript SOP v3 optimization. New writer pickup must only run from a `main` revision that contains both:
+
+- the documented writer reference `prompts/writer/references/transcript-sop-v3-natural-tts.md`
+- deterministic SOP v3 transcript quality checks in `evaluateTranscriptQuality`
+
+If either prerequisite is missing, scheduler operators must pause new writer pickup instead of producing new transcript PRs.
+
 Scheduled command:
 
 ```sh
@@ -350,7 +357,7 @@ Writer artifact contract:
 - `parseTranscriptMarkdown(markdown)` and `serializeTranscriptMarkdown(transcript)` are the shared conversion functions between `transcript.md` and the `Transcript` contract.
 - PM must block producer handoff when any required writer artifact is missing.
 - PM must validate `transcript.json` against the transcript schema.
-- PM must recompute deterministic transcript quality checks and must not trust a passing writer report by itself.
+- PM must recompute deterministic transcript quality checks, including Transcript SOP v3 checks, and must not trust a passing writer report by itself.
 
 ## Practical Expectations
 

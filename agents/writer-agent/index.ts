@@ -128,9 +128,13 @@ export async function runWriterAgentPickup(input: {
       path.join(runDir, "transcript.json"),
       path.join(runDir, "transcript-quality-report.json")
     ];
-    const qualityReport = JSON.parse(await fs.readFile(path.join(runDir, "transcript-quality-report.json"), "utf8")) as {
-      status?: string;
-    };
+    const qualityReport = JSON.parse(
+      await fs.readFile(path.join(runDir, "transcript-quality-report.json"), "utf8")
+    ) as Partial<TranscriptQualityReport>;
+    if (qualityReport.status !== "pass") {
+      throw new Error(`Writer transcript quality gate failed: ${formatFailedQualityChecks(qualityReport)}`);
+    }
+
     const prUrl = await (input.openPullRequest ?? openWriterPullRequest)({
       issue,
       runDir,
@@ -302,16 +306,36 @@ export async function writeTranscriptQualityReport(transcript: Transcript, runDi
 
 export function evaluateTranscriptQuality(transcript: Transcript): TranscriptQualityReport {
   const scriptText = [transcript.opening, ...transcript.segments.map((segment: Transcript["segments"][number]) => segment.body), transcript.closing].join("\n");
+  const spokenText = stripDirectorTags(scriptText);
   const sfxOrBgmCueCount = countMatches(scriptText, /\[(?:SFX|BGM):[^\]]+\]/gi);
   const attentionResetCount = countMatches(scriptText, /\[Action:[^\]]+\]/gi) + countMatches(scriptText, /\?/g);
-  const secondPersonCount = countMatches(scriptText, /\b(?:you|your)\b/gi);
+  const secondPersonCount = countMatches(spokenText, /\b(?:you|your)\b/gi);
   const requiredCueCount = Math.ceil(transcript.estimatedDurationMin);
   const requiredAttentionResetCount = Math.max(2, Math.ceil(transcript.estimatedDurationMin / 3));
+  const bannedSignpostCount = countMatches(
+    spokenText,
+    /\b(?:here is your first clue|first clue|now we slow down|here is where|mission time)\b/gi
+  );
+  const rawIsoDateCount = countMatches(spokenText, /\b\d{4}-\d{2}-\d{2}\b/g);
+  const bareFourDigitYearCount = countMatches(spokenText, /\b(?:1[5-9]\d{2}|20\d{2}|21\d{2})\b/g);
+  const rawArabicNumeralCount = countMatches(spokenText, /\b\d+(?:\.\d+)?\b/g);
+  const requiredDirectorTags = ["SFX", "BGM", "Voice", "Pause", "Action"] as const;
+  const presentDirectorTags = requiredDirectorTags.filter((tag) =>
+    new RegExp(`\\[${tag}:[^\\]]+\\]`, "i").test(scriptText)
+  );
+  const malformedDirectorTagCount = countMatches(
+    scriptText,
+    /\[(?:SFX|BGM|Voice|Pause|Action)(?!:)[^\]]*\]/gi
+  );
+  const scienceModule = transcript.segments.find((segment) =>
+    /scientific deep-dive/i.test(segment.heading)
+  );
+  const scienceModuleText = scienceModule?.body ?? "";
   const checks: Record<string, TranscriptQualityCheck> = {
-    duration_5_to_8_min: buildCheck(
-      transcript.estimatedDurationMin >= 5 && transcript.estimatedDurationMin <= 8,
+    sop_v3_optimized_duration_3_5_to_5_min: buildCheck(
+      transcript.estimatedDurationMin >= 3.5 && transcript.estimatedDurationMin <= 5,
       transcript.estimatedDurationMin,
-      "estimatedDurationMin is between 5 and 8"
+      "estimatedDurationMin is between 3.5 and 5 for SOP v3 optimized short format"
     ),
     five_module_structure: buildCheck(
       hasFiveModuleStructure(transcript),
@@ -337,6 +361,51 @@ export function evaluateTranscriptQuality(transcript: Transcript): TranscriptQua
       transcript.ttsNotes.some((note: string) => /pronunciation|phonetic/i.test(note)),
       transcript.ttsNotes.length,
       "ttsNotes include pronunciation or phonetic support"
+    ),
+    sop_v3_no_banned_signposting: buildCheck(
+      bannedSignpostCount === 0,
+      bannedSignpostCount,
+      "zero banned signposting transitions"
+    ),
+    sop_v3_no_raw_iso_dates: buildCheck(
+      rawIsoDateCount === 0,
+      rawIsoDateCount,
+      "zero raw ISO dates such as 2026-10-02 in spoken text"
+    ),
+    sop_v3_no_bare_years: buildCheck(
+      bareFourDigitYearCount === 0,
+      bareFourDigitYearCount,
+      "zero bare four-digit years in spoken text"
+    ),
+    sop_v3_no_raw_arabic_numerals: buildCheck(
+      rawArabicNumeralCount === 0,
+      rawArabicNumeralCount,
+      "zero raw Arabic numerals in spoken text"
+    ),
+    sop_v3_required_director_tags: buildCheck(
+      presentDirectorTags.length === requiredDirectorTags.length,
+      presentDirectorTags.length,
+      "all required director tags are present: [SFX: ...], [BGM: ...], [Voice: ...], [Pause: ...], [Action: ...]"
+    ),
+    sop_v3_no_malformed_director_tags: buildCheck(
+      malformedDirectorTagCount === 0,
+      malformedDirectorTagCount,
+      "zero malformed director tags such as [Pause 1s]"
+    ),
+    sop_v3_module_3_concrete_science: buildCheck(
+      hasConcreteSciencePrinciple(scienceModuleText),
+      Boolean(scienceModule),
+      "Module 3 includes one concrete science principle"
+    ),
+    sop_v3_module_3_everyday_metaphor: buildCheck(
+      hasEverydayMetaphor(scienceModuleText),
+      Boolean(scienceModule),
+      "Module 3 includes one everyday metaphor"
+    ),
+    sop_v3_module_3_physical_action_test: buildCheck(
+      hasPhysicalActionTest(scienceModuleText),
+      Boolean(scienceModule),
+      "Module 3 includes one 10-second physical action test"
     )
   };
 
@@ -369,6 +438,30 @@ function hasFiveModuleStructure(transcript: Transcript) {
 
 function countMatches(input: string, pattern: RegExp) {
   return input.match(pattern)?.length ?? 0;
+}
+
+function stripDirectorTags(input: string) {
+  return input.replace(/\[(?:SFX|BGM|Voice|Pause|Action):[^\]]+\]/gi, " ");
+}
+
+function hasConcreteSciencePrinciple(input: string) {
+  return /\b(?:science|principle|brain|visual|psychology|interface|design|pattern|energy|empathy|signal|sound|physics|biology|chemistry)\b/i.test(input);
+}
+
+function hasEverydayMetaphor(input: string) {
+  return /\b(?:like|as if|acts like|feels like|works like|metaphor)\b/i.test(input);
+}
+
+function hasPhysicalActionTest(input: string) {
+  return /\[Action:[^\]]+\]/i.test(input) && /\b(?:test|try|draw|tap|point|touch|look|move|hold)\b/i.test(input);
+}
+
+function formatFailedQualityChecks(report: { checks?: Record<string, { status?: string; expected?: string; actual?: unknown }> }) {
+  const failures = Object.entries(report.checks ?? {})
+    .filter(([, check]) => check.status !== "pass")
+    .map(([checkName, check]) => `${checkName} expected ${check.expected ?? "pass"}, actual ${String(check.actual)}`);
+
+  return failures.length > 0 ? failures.join("; ") : "report.status is fail";
 }
 
 function selectWriterIssue(issues: IssueQueueIssue[], issueNumber?: number) {

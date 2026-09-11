@@ -313,6 +313,8 @@ function passingTranscript(): Transcript {
   return {
     opening: [
       "Good morning, time traveler. [SFX: time machine hum, 2s]",
+      "[BGM: bright morning pulse, under narration]",
+      "[Voice: warm and curious]",
       "You are stepping into a day when computers began to feel friendlier for your family."
     ].join("\n"),
     segments: [
@@ -322,11 +324,17 @@ function passingTranscript(): Transcript {
       },
       {
         heading: "Narrative Drama",
-        body: "You wait outside a store with other curious families. Your eyes spot boxes of Windows 95. [BGM: curious light pulse]"
+        body: "You wait outside a store with other curious families. Your eyes spot boxes of Windows ninety-five. [BGM: curious light pulse]"
       },
       {
         heading: "Scientific Deep-Dive",
-        body: "You learn that an interface is like a school hallway for your computer. It helps you find rooms, tools, and files. [SFX: clock tick]"
+        body: [
+          "[Pause: 1s]",
+          "You learn the science principle that visual interface design gives your brain a shortcut.",
+          "An interface works like a school hallway for your computer because it helps you find rooms, tools, and files.",
+          "[Action: try a ten-second test by pointing to one button or menu near you]",
+          "[SFX: clock tick]"
+        ].join(" ")
       },
       {
         heading: "Modern World Twist",
@@ -339,6 +347,6 @@ function passingTranscript(): Transcript {
     ],
     closing: "You made it back to today, and your next click has a history. You can notice design choices everywhere now.",
     estimatedDurationMin: 5,
-    ttsNotes: ["Pronunciation: Microsoft as MY-kroh-soft; Windows 95 as Windows ninety-five."]
+    ttsNotes: ["Pronunciation: Microsoft as MY-kroh-soft; Windows ninety-five as Windows ninety-five."]
   };
 }
