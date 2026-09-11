@@ -112,7 +112,7 @@ describe("writer agent", () => {
     const qualityReport = JSON.parse(await fs.readFile(path.join(runDir, "transcript-quality-report.json"), "utf8"));
 
     expect(transcript.segments).toHaveLength(5);
-    expect(transcript.segments[0].body).toContain("Windows 95");
+    expect(transcript.segments[0].body).toContain("Windows ninety-five");
     expect(qualityReport.status).toBe("pass");
     await expect(fs.readFile(path.join(runDir, "transcript.md"), "utf8")).resolves.toContain(
       "## Modern World Twist"
@@ -137,6 +137,100 @@ describe("writer agent", () => {
     expect(report.status).toBe("fail");
     expect(report.checks.five_module_structure.status).toBe("fail");
     expect(report.checks.sfx_or_bgm_density.status).toBe("fail");
+  });
+
+  it("fails SOP v3 checks on robotic signposts, raw dates, and weak science pivots", () => {
+    const roboticDraft: Transcript = {
+      opening: [
+        "[SFX: time machine hum]",
+        "[BGM: curious pulse]",
+        "[Voice: announcer]",
+        "Good morning. Today is 2026-10-02. Here is your first clue about a famous event."
+      ].join(" "),
+      segments: [
+        {
+          heading: "Time Machine Hook",
+          body: "First clue: you see a desk. What do you notice? [Action: point to your desk]"
+        },
+        {
+          heading: "Narrative Drama",
+          body: "The story happened in 1950 and 7 newspapers saw it."
+        },
+        {
+          heading: "Scientific Deep-Dive",
+          body: "[Pause 1s] Now we slow down and investigate the hidden machinery. This is interesting."
+        },
+        {
+          heading: "Modern World Twist",
+          body: "Here is where the past connects to your world."
+        },
+        {
+          heading: "Outro & Mission",
+          body: "Mission time. You can tell someone about it."
+        }
+      ],
+      closing: "You made it back to today.",
+      estimatedDurationMin: 5,
+      ttsNotes: ["Pronunciation: read names clearly."]
+    };
+
+    const report = evaluateTranscriptQuality(roboticDraft);
+
+    expect(report.status).toBe("fail");
+    expect(report.checks.sop_v3_no_banned_signposting.status).toBe("fail");
+    expect(report.checks.sop_v3_no_raw_iso_dates.status).toBe("fail");
+    expect(report.checks.sop_v3_no_bare_years.status).toBe("fail");
+    expect(report.checks.sop_v3_no_raw_arabic_numerals.status).toBe("fail");
+    expect(report.checks.sop_v3_no_malformed_director_tags.status).toBe("fail");
+    expect(report.checks.sop_v3_module_3_concrete_science.status).toBe("fail");
+  });
+
+  it("passes SOP v3 checks on natural short-format TTS-ready scripts", () => {
+    const naturalDraft: Transcript = {
+      opening: [
+        "[SFX: time machine engine rev, low pitch]",
+        "[BGM: bright discovery beat, under narration]",
+        "[Voice: curious and close]",
+        "Good morning, time traveler. You step into October second, twenty twenty-six, with one question already buzzing in your pocket."
+      ].join(" "),
+      segments: [
+        {
+          heading: "Time Machine Hook",
+          body: "A drawing desk appears in front of you. What tiny line catches your eye first? [Action: trace a smile shape in the air]"
+        },
+        {
+          heading: "Narrative Drama",
+          body: "You watch a simple picture pull people closer because it feels honest, small, and easy to understand. [SFX: page flip]"
+        },
+        {
+          heading: "Scientific Deep-Dive",
+          body: [
+            "[Pause: 1s]",
+            "Wait a second. How can two dots and a curved line make your brain feel an emotion?",
+            "The science principle is this: visual psychology lets your brain read simple patterns as fast emotional shortcuts.",
+            "A simple face works like a tiny visual text message.",
+            "[Action: try a ten-second test by drawing a smile, then a frown, in the air]"
+          ].join(" ")
+        },
+        {
+          heading: "Modern World Twist",
+          body: "That same shortcut pops up when you choose an emoji. Can you spot the curve that changes the feeling? [BGM: quick modern sparkle]"
+        },
+        {
+          heading: "Outro & Mission",
+          body: "Today, show someone how a few simple lines can change what they feel. [Action: point to an emoji and name the feeling] [SFX: soft bell chime]"
+        }
+      ],
+      closing: "You made it back to today, and now you can see the science hiding inside tiny drawings.",
+      estimatedDurationMin: 4.5,
+      ttsNotes: ["Pronunciation: Schulz [Voice: pronounced as Shults]."]
+    };
+
+    const report = evaluateTranscriptQuality(naturalDraft);
+
+    expect(report.status).toBe("pass");
+    expect(report.checks.sop_v3_optimized_duration_3_5_to_5_min.status).toBe("pass");
+    expect(report.checks.sop_v3_required_director_tags.status).toBe("pass");
   });
 
   it("picks up a writer-routed issue without requiring type labels", async () => {
@@ -212,7 +306,7 @@ describe("writer agent", () => {
       "## Time Machine Hook"
     );
     await expect(fs.readFile(path.join(runDir, "transcript.json"), "utf8")).resolves.toContain(
-      "The launch of Windows 95"
+      "The launch of Windows ninety-five"
     );
     await expect(
       fs.readFile(path.join(runDir, "transcript-quality-report.json"), "utf8")
@@ -330,6 +424,70 @@ describe("writer agent", () => {
     expect(labelUpdates.flat()).not.toContain("status:producing");
   });
 
+  it("records a writer quality failure without opening a PR when SOP v3 checks fail", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "writer-agent-pickup-"));
+    const runDir = path.join(repoRoot, "runs", "2026-08-24-august-24-2026");
+    const calls: Array<{ file: string; args: string[] }> = [];
+    let attemptedPullRequest = false;
+
+    await fs.mkdir(runDir, { recursive: true });
+    await fs.writeFile(
+      path.join(runDir, "research-dossier.json"),
+      windows95DossierJson({
+        storyBeats: [
+          "Families and computer stores wait for 100 midnight launch parties",
+          "A new Start button and taskbar make computers feel more approachable",
+          "The launch shows how software can change daily habits"
+        ]
+      }),
+      "utf8"
+    );
+
+    await expect(
+      runWriterAgentPickup({
+        repo: "joycytao/what-happened-on-this-day-podcast",
+        repoRoot,
+        loadIssues: async () => [
+          {
+            number: 24,
+            title: "Episode: August 24, 2026",
+            state: "OPEN" as const,
+            labels: ["status:writing", "agent:writer"]
+          }
+        ],
+        loadIssue: async () => ({
+          issueNumber: 24,
+          title: "Episode: August 24, 2026",
+          body: [
+            "date: 2026-08-24",
+            "episode_slug: 2026-08-24-august-24-2026",
+            "language: en",
+            "audience: children-first-adult-friendly",
+            "duration_target_min: 5",
+            "duration_max_min: 8",
+            "current_stage: writing",
+            "output_run_path: runs/2026-08-24-august-24-2026"
+          ].join("\n"),
+          labels: ["status:writing", "agent:writer", "claim:writer-agent"],
+          state: "OPEN" as const
+        }),
+        execFile: async (file, args) => {
+          calls.push({ file, args });
+          return "";
+        },
+        openPullRequest: async () => {
+          attemptedPullRequest = true;
+          return "https://github.com/joycytao/what-happened-on-this-day-podcast/pull/51";
+        }
+      })
+    ).rejects.toThrow("sop_v3_no_raw_arabic_numerals");
+
+    expect(attemptedPullRequest).toBe(false);
+    expect(calls[0]?.args).toContain("claim:writer-agent");
+    expect(calls[1]?.args.join("\n")).toContain("Responsible agent: writer-agent");
+    expect(calls[1]?.args.join("\n")).toContain("sop_v3_no_raw_arabic_numerals");
+  });
+
   it("records a retryable writer failure without changing status:writing", async () => {
     const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "writer-agent-pickup-"));
     const runDir = path.join(repoRoot, "runs", "2026-08-24-august-24-2026");
@@ -419,7 +577,9 @@ describe("writer agent", () => {
   });
 });
 
-function windows95DossierJson() {
+function windows95DossierJson(overrides: Partial<{
+  storyBeats: string[];
+}> = {}) {
   return `${JSON.stringify({
     episodeDate: "2026-08-24",
     chosenSubject: "The launch of Windows 95",
@@ -444,6 +604,7 @@ function windows95DossierJson() {
         sourceType: "official"
       }
     ],
-    safetyNotes: []
+    safetyNotes: [],
+    ...overrides
   }, null, 2)}\n`;
 }
