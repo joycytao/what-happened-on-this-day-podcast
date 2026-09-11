@@ -12,7 +12,7 @@ Example: instead of defining a cell nucleus in technical language, compare it to
 
 ### Design characters and voice
 
-Young listeners respond to personality. Give the host a clear voice: curious, playful, warm, and smart without sounding superior. Recurring helper roles can also work, such as a curious sidekick or an expert character, as long as they support the story.
+Young listeners respond to personality. Give the host a clear voice: a cool science explorer who is curious, energetic, direct, and smart without sounding superior. Recurring helper roles can also work, such as a curious sidekick or an expert character, as long as they support the story.
 
 ### Pull attention back often
 
@@ -24,6 +24,8 @@ Examples:
 - "Hold that thought."
 - "Tap your fingers twice if you caught the clue."
 - "Listen for the sound that tells us the scene changed."
+
+Every 3 minutes, include at least one physical action tag such as `[Action: tap your fingers twice]` or one direct question that pulls the listener back into the story.
 
 ## Key script rules
 
@@ -45,11 +47,15 @@ Use sound to replace explanation when possible. Mark frequent SFX opportunities,
 
 ### Control length and rhythm
 
-For elementary listeners, keep episodes within 5-8 minutes. Change a small unit or shift the audio mood every 2-3 minutes.
+For the optimized short format, keep episodes within 3.5-5 minutes and 700-900 words unless PM asks for the older 5-8 minute long-form mode. Change a small unit or shift the audio mood every 2-3 minutes.
 
 ### Avoid lecturing
 
-The tone should feel like an older sibling or guide who knows a lot and still likes to play. Keep eye-level curiosity. Use encouragement and invitation. Avoid scolding phrases such as "you should" or "you must" unless safety requires them.
+The tone should feel like an older sibling or guide who knows a lot and still likes to play. Keep eye-level curiosity. Use encouragement and invitation. Avoid scolding phrases such as "you should" or "you must" unless safety requires them. Avoid babyish wording and do not talk down to the listener.
+
+### Use natural transitions
+
+Do not announce sections with phrases such as `Here is your first clue`, `First clue`, `Now we slow down`, `Here is where`, or `Mission time`. Move from one part to the next with a sound, a scene detail, a direct question, or a familiar action.
 
 ## Completion checks
 
@@ -59,6 +65,9 @@ Before finishing, the writer must confirm:
 - the hook starts within the first 15 seconds
 - sentences are short enough to read aloud
 - SFX, BGM, pause, tone, or pronunciation cues appear where useful
+- director tags use `[SFX: ...]`, `[BGM: ...]`, `[Voice: ...]`, `[Pause: ...]`, and `[Action: ...]`
+- dates, years, numbers, and hard names are rewritten for TTS
+- Module 3 includes one concrete science principle, one everyday metaphor, and one physical action test
 - the episode has one clear core idea
 - the host voice is warm, curious, and age-appropriate
 - the transcript has passed the Humanizer gate

@@ -12,12 +12,24 @@ describe("writer prompt references", () => {
       "prompts/writer/references/student-podcast-script-guidelines.md",
       "utf8"
     );
+    const sopV3 = await fs.readFile(
+      "prompts/writer/references/transcript-sop-v3-natural-tts.md",
+      "utf8"
+    );
 
     expect(systemPrompt).toContain("podcast script, not an article");
     expect(systemPrompt).toContain("prompts/writer/references/podcast-script-writer-guidelines.md");
     expect(systemPrompt).toContain("prompts/writer/references/student-podcast-script-guidelines.md");
+    expect(systemPrompt).toContain("prompts/writer/references/transcript-sop-v3-natural-tts.md");
     expect(generalGuideline).toContain("Writing for the ear");
+    expect(generalGuideline).toContain("Here is your first clue");
+    expect(generalGuideline).toContain("October second, twenty twenty-six");
     expect(studentGuideline).toContain("7-15");
     expect(studentGuideline).toContain("SFX");
+    expect(studentGuideline).toContain("3.5-5 minutes");
+    expect(sopV3).toContain("zero banned signposting transitions");
+    expect(sopV3).toContain("[Pause: duration]");
+    expect(sopV3).toContain("one concrete science principle");
+    expect(sopV3).toContain("Schulz [Voice: pronounced as Shults]");
   });
 });

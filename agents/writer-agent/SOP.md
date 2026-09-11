@@ -17,6 +17,7 @@ This SOP defines how writer-agent should prepare podcast scripts for producer-ag
 
    - `prompts/writer/references/podcast-script-writer-guidelines.md`
    - `prompts/writer/references/student-podcast-script-guidelines.md`
+   - `prompts/writer/references/transcript-sop-v3-natural-tts.md`
 
 4. Write an English podcast script for the ear, not a page-oriented article.
 5. Use the five-module Time Machine Adventure structure:
@@ -34,18 +35,36 @@ This SOP defines how writer-agent should prepare podcast scripts for producer-ag
    [SFX: description, optional duration]
    [BGM: description, optional placement note]
    [Voice: emotion or speed]
-   [Pause duration]
+   [Pause: duration]
    [Action: physical prompt]
    ```
 
-8. Keep the target length at 5-8 minutes unless PM gives a narrower constraint.
-9. Add at least one everyday metaphor in the science module.
-10. Add listener attention resets at least every 3 minutes.
-11. Add `[SFX]` or `[BGM]` transitions every 45-60 seconds.
-12. Add phonetic or pronunciation guidance for proper nouns and technical terms.
-13. Read aloud or simulate a read-aloud pass.
-14. Run the Humanizer review loop required by project instructions.
-15. Revise until the transcript passes the read-aloud and Humanizer gates.
+8. Default to the optimized short format: 3.5-5 minutes and 700-900 words, unless PM explicitly requests the older 5-8 minute long-form mode.
+9. Remove robotic signposting such as `Here is your first clue`, `First clue`, `Now we slow down`, `Here is where`, and `Mission time`.
+10. Replace signposting with sensory bridges, direct question bridges, or everyday anchors.
+11. Add at least one everyday metaphor in the science module.
+12. Make Module 3 concrete: one science principle, one everyday metaphor, and one 10-second physical action test.
+13. Add listener attention resets at least every 3 minutes.
+14. Add `[SFX]` or `[BGM]` transitions every 45-60 seconds.
+15. Preprocess dates, years, numbers, and proper nouns for TTS.
+16. Add phonetic or pronunciation guidance for proper nouns and technical terms.
+17. Read aloud or simulate a read-aloud pass.
+18. Run the Humanizer review loop required by project instructions.
+19. Revise until the transcript passes the read-aloud and Humanizer gates.
+
+## Transcript SOP v3 Natural Rewrite Rules
+
+Writer-agent must follow `prompts/writer/references/transcript-sop-v3-natural-tts.md` before opening a transcript PR.
+
+Use these rules especially when a draft comes from AI generation or database-template output:
+
+- clean unrevised event-title strings into natural spoken sentences
+- rewrite hard section announcements into scene, sound, action, or question bridges
+- write dates as spoken words, such as `October second, twenty twenty-six`
+- write years as spoken words, such as `nineteen fifty`
+- write Arabic numerals as words in spoken script text, such as `seven newspapers`
+- add pronunciation support for difficult names, such as `Schulz [Voice: pronounced as Shults]`
+- keep the host voice as a cool science explorer speaking directly and respectfully to `you`
 
 ## Cue Writing Rules
 
@@ -57,7 +76,7 @@ Prefer specific cue descriptions:
 - Good: `[SFX: time machine hum, 2s]`
 - Good: `[BGM: curious light pulse, under narration]`
 - Good: `[Voice: excited whisper]`
-- Good: `[Pause 1s]`
+- Good: `[Pause: 1s]`
 - Good: `[Action: tap your fingers twice]`
 
 Avoid vague cues that producer-agent cannot resolve:
